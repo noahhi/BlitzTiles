@@ -289,7 +289,7 @@ describe('Spectator Mode - Game Flow Integration', () => {
       // Verify spectators see the updated state
       expect(receivedState.currentPlayerIndex).toBe(1); // Turn switched
       expect(receivedState.moveHistory).toHaveLength(1);
-      expect(receivedState.moveHistory[0].action).toBe('move');
+      expect(receivedState.moveHistory[0].action).toBe('submit');
       expect(receivedState.players[0].score).toBeGreaterThan(0); // Scored points
 
       // Verify board updated

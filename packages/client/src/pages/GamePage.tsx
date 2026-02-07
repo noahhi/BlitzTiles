@@ -9,7 +9,7 @@ import {
   useSensors,
   closestCenter,
 } from '@dnd-kit/core';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { GameBoard } from '../components/board/GameBoard';
 import { TileRack } from '../components/tiles/TileRack';
@@ -241,6 +241,10 @@ function OnlineGame({
   useWakeLock(phase === 'playing');
   useKeyboardControls(!isSpectator); // Disable keyboard controls for spectators
 
+  // Track spectator sendFn references so disconnect can remove the correct one
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const spectatorSendFnMap = useRef<Map<any, (msg: unknown) => void>>(new Map());
+
   const [initialized, setInitialized] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
   const [pendingBlank, setPendingBlank] = useState<{
@@ -303,16 +307,16 @@ function OnlineGame({
             conn.send(msg);
           }
         };
+        spectatorSendFnMap.current.set(conn, sendFn);
         addSpectatorConnection(sendFn);
       });
 
       connection.setOnSpectatorDisconnected((conn) => {
-        const sendFn = (msg: unknown) => {
-          if (conn.open) {
-            conn.send(msg);
-          }
-        };
-        removeSpectatorConnection(sendFn);
+        const sendFn = spectatorSendFnMap.current.get(conn);
+        if (sendFn) {
+          removeSpectatorConnection(sendFn);
+          spectatorSendFnMap.current.delete(conn);
+        }
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -329,7 +333,9 @@ function OnlineGame({
 
     if (initialized) {
       // Recovery or reconnect: request sync from host
-      if (role === 'guest' || role === 'spectator') {
+      // Note: spectators don't need REQUEST_SYNC — they get fresh state
+      // via addSpectatorConnection when host processes their SPECTATE_JOIN
+      if (role === 'guest') {
         connection.send({ type: 'REQUEST_SYNC' });
       }
       // Host: send current state to reconnecting guest

@@ -614,16 +614,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   updateConfig: (configUpdates) => {
-    const { _gameState } = get();
+    const { _gameState, mode } = get();
     if (_gameState) {
       const newConfig = { ..._gameState.config, ...configUpdates };
+      const newGameState = { ..._gameState, config: newConfig };
       set({
         config: newConfig,
-        _gameState: {
-          ..._gameState,
-          config: newConfig,
-        },
+        _gameState: newGameState,
       });
+
+      // Broadcast updated state to spectators so config changes take effect immediately
+      if (mode === 'host') {
+        broadcastToSpectators(get, newGameState);
+      }
     }
   },
 
