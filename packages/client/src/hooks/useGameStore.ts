@@ -116,11 +116,15 @@ export async function getDictionary(): Promise<Trie> {
         return res.arrayBuffer();
       })
       .then((buf) => {
-        console.log(`[BlitzTiles] Dictionary loaded (${buf.byteLength} bytes), decompressing...`);
+        if (import.meta.env.DEV) {
+          console.log(`[BlitzTiles] Dictionary loaded (${buf.byteLength} bytes), decompressing...`);
+        }
         return loadCompressedDictionary(new Uint8Array(buf));
       })
       .then((trie) => {
-        console.log(`[BlitzTiles] Dictionary ready (${trie.size} words)`);
+        if (import.meta.env.DEV) {
+          console.log(`[BlitzTiles] Dictionary ready (${trie.size} words)`);
+        }
         return trie;
       })
       .catch((err) => {

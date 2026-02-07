@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from './useGameStore';
 
+const CRITICAL_URGENCY_THRESHOLD_MS = 5000;
+const WARNING_URGENCY_THRESHOLD_MS = 15000;
+
 export type Urgency = 'normal' | 'warning' | 'critical';
 
 export interface TimerState {
@@ -20,8 +23,8 @@ function formatTime(ms: number): string {
 }
 
 function getUrgency(ms: number): Urgency {
-  if (ms <= 5000) return 'critical';
-  if (ms <= 15000) return 'warning';
+  if (ms <= CRITICAL_URGENCY_THRESHOLD_MS) return 'critical';
+  if (ms <= WARNING_URGENCY_THRESHOLD_MS) return 'warning';
   return 'normal';
 }
 
@@ -49,7 +52,7 @@ export function useTimer(): TimerState {
       setRemainingMs(remaining);
 
       // Vibrate once when entering critical zone
-      if (remaining <= 5000 && !vibratedRef.current) {
+      if (remaining <= CRITICAL_URGENCY_THRESHOLD_MS && !vibratedRef.current) {
         vibratedRef.current = true;
         if (typeof navigator.vibrate === 'function') {
           navigator.vibrate([100, 50, 100]); // short double buzz
