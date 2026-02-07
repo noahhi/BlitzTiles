@@ -13,6 +13,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import type { Trie } from '@blitztiles/shared';
+import { getDictionary } from './useGameStore';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -264,16 +265,10 @@ export function useGameConnection(
         setupHost(recoveryCode);
       } else {
         // Load dictionary and pick a word as the room code
-        import('./useGameStore')
-          .then(({ getDictionary }) =>
-            getDictionary()
-              .then((trie) => {
-                setupHost(generateRoomCode(trie));
-              })
-              .catch(() => {
-                setupHost(generateRoomCode());
-              }),
-          )
+        getDictionary()
+          .then((trie) => {
+            setupHost(generateRoomCode(trie));
+          })
           .catch(() => {
             setupHost(generateRoomCode());
           });
