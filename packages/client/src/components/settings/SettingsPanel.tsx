@@ -1,4 +1,5 @@
 import { useSettingsStore, type Settings } from '../../hooks/useSettingsStore';
+import { useTheme } from '../../hooks/useTheme';
 import './SettingsPanel.css';
 
 const toggles: { key: keyof Settings; label: string; description: string }[] = [
@@ -32,9 +33,33 @@ const toggles: { key: keyof Settings; label: string; description: string }[] = [
 
 export function SettingsPanel() {
   const store = useSettingsStore();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="settings-panel">
+      {/* Theme toggle */}
+      <div className="settings-row theme-row">
+        <div className="settings-label">
+          <span className="settings-name">Theme</span>
+          <span className="settings-desc">Switch between dark and light mode</span>
+        </div>
+        <div className="theme-toggle">
+          <button
+            className={`theme-option ${theme === 'dark' ? 'active' : ''}`}
+            onClick={() => theme !== 'dark' && toggleTheme()}
+          >
+            🌙 Dark
+          </button>
+          <button
+            className={`theme-option ${theme === 'light' ? 'active' : ''}`}
+            onClick={() => theme !== 'light' && toggleTheme()}
+          >
+            ☀️ Light
+          </button>
+        </div>
+      </div>
+
+      {/* Other settings toggles */}
       {toggles.map(({ key, label, description }) => (
         <label key={key} className="settings-row">
           <div className="settings-label">
