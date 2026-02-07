@@ -48,6 +48,7 @@ export interface GameStore {
     score: number;
     handSize: number;
     timeRemainingMs: number;
+    hand?: Tile[]; // Optional - only present for spectators when spectatorHandsVisible is true
   }[];
   currentHand: Tile[];
   tileBagCount: number;
@@ -299,6 +300,7 @@ function syncFromSpectatorGameState(spectatorState: SpectatorGameState): Partial
       score: p.score,
       handSize: p.handSize,
       timeRemainingMs: p.timeRemainingMs,
+      ...(p.hand && { hand: p.hand }), // Include hand if spectatorHandsVisible is true
     })),
     currentHand: [], // Spectators never have a hand
     tileBagCount: spectatorState.tileBagCount,
