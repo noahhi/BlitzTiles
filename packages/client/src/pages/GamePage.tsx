@@ -23,6 +23,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useGameStore, filterStateForPlayer } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { loadSession, clearSession } from '../hooks/sessionPersistence';
 import type { PersistedSession } from '../hooks/sessionPersistence';
 import './GamePage.css';
@@ -64,6 +65,7 @@ function LocalGame() {
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
 
   useWakeLock(phase === 'playing');
+  useKeyboardControls(true);
 
   const [pendingBlank, setPendingBlank] = useState<{
     tileId: string;
@@ -223,6 +225,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
 
   useWakeLock(phase === 'playing');
+  useKeyboardControls(true);
 
   const [initialized, setInitialized] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
