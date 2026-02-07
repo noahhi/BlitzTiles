@@ -15,6 +15,7 @@ interface BoardCellProps {
   ghostTile?: PlacedTile;
   isSelected: boolean;
   isLastMove: boolean;
+  isCursor?: boolean;
   pendingEdges?: EdgeFlags;
   lastMoveEdges?: EdgeFlags;
   scorePreview?: number | null;
@@ -34,6 +35,7 @@ export function BoardCell({
   ghostTile,
   isSelected,
   isLastMove,
+  isCursor = false,
   pendingEdges,
   lastMoveEdges,
   scorePreview,
@@ -71,6 +73,7 @@ export function BoardCell({
     isOver ? 'drag-over' : '',
     isLastMove ? 'last-move' : '',
     hasConflict ? 'conflict' : '',
+    isCursor ? 'cursor' : '',
   ]
     .filter(Boolean)
     .join(' ');

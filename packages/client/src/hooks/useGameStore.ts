@@ -78,6 +78,8 @@ export interface GameStore {
   lastMoveTiles: { row: number; col: number }[];
   exchangeMode: boolean;
   exchangeSelection: Set<string>;
+  cursorPosition: { row: number; col: number } | null;
+  cursorDirection: 'horizontal' | 'vertical';
 
   // Network state
   mode: GameMode;
@@ -111,6 +113,10 @@ export interface GameStore {
   clearError: () => void;
   setExchangeMode: (on: boolean) => void;
   toggleExchangeTile: (tileId: string) => void;
+  setCursor: (row: number, col: number) => void;
+  clearCursor: () => void;
+  moveCursor: (direction: 'up' | 'down' | 'left' | 'right') => void;
+  toggleCursorDirection: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +296,8 @@ const INITIAL_STATE = {
   lastMoveTiles: [] as { row: number; col: number }[],
   exchangeMode: false,
   exchangeSelection: new Set<string>(),
+  cursorPosition: null as { row: number; col: number } | null,
+  cursorDirection: 'horizontal' as 'horizontal' | 'vertical',
 
   mode: 'local' as GameMode,
   playerIndex: 0,
@@ -1033,5 +1041,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.add(tileId);
     }
     set({ exchangeSelection: next });
+  },
+
+  setCursor: (row: number, col: number) => {
+    if (row < 0 || row > 14 || col < 0 || col > 14) return;
+    set({ cursorPosition: { row, col } });
+  },
+
+  clearCursor: () => {
+    set({ cursorPosition: null });
+  },
+
+  moveCursor: (direction: 'up' | 'down' | 'left' | 'right') => {
+    const { cursorPosition } = get();
+    if (!cursorPosition) {
+      // Start at center if no cursor
+      set({ cursorPosition: { row: 7, col: 7 } });
+      return;
+    }
+
+    let { row, col } = cursorPosition;
+    switch (direction) {
+      case 'up':
+        row = Math.max(0, row - 1);
+        break;
+      case 'down':
+        row = Math.min(14, row + 1);
+        break;
+      case 'left':
+        col = Math.max(0, col - 1);
+        break;
+      case 'right':
+        col = Math.min(14, col + 1);
+        break;
+    }
+    set({ cursorPosition: { row, col } });
+  },
+
+  toggleCursorDirection: () => {
+    const { cursorDirection } = get();
+    set({ cursorDirection: cursorDirection === 'horizontal' ? 'vertical' : 'horizontal' });
   },
 }));

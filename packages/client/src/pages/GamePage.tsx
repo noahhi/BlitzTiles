@@ -26,6 +26,7 @@ import { DEFAULT_GAME_CONFIG, DEFAULT_RACING_ROUND_TIME_LIMIT_MS } from '@blitzt
 import { useGameStore, filterStateForPlayer } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { loadSession, clearSession } from '../hooks/sessionPersistence';
 import type { PersistedSession } from '../hooks/sessionPersistence';
 import './GamePage.css';
@@ -68,6 +69,7 @@ function LocalGame() {
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
 
   useWakeLock(phase === 'playing');
+  useKeyboardControls(true);
 
   const [pendingBlank, setPendingBlank] = useState<{
     tileId: string;
@@ -236,6 +238,7 @@ function OnlineGame({
   const gameVariant = useGameStore((s) => s.gameVariant);
 
   useWakeLock(phase === 'playing');
+  useKeyboardControls(true);
 
   const [initialized, setInitialized] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<'classic' | 'racing'>(

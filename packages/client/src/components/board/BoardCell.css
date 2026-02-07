@@ -31,6 +31,22 @@
   box-shadow: inset 0 0 0 2px var(--tile-selected);
 }
 
+.board-cell.cursor {
+  background: rgba(52, 211, 153, 0.2);
+  box-shadow: inset 0 0 0 2px rgba(52, 211, 153, 0.8);
+  animation: cursor-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cursor-pulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 2px rgba(52, 211, 153, 0.8);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px rgba(52, 211, 153, 1);
+  }
+}
+
 /* Bonus square colors */
 .board-cell.bonus-dl {
   background: var(--dl);

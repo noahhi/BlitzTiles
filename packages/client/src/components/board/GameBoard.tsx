@@ -19,6 +19,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
   const phase = useGameStore((s) => s.phase);
   const lastMoveTiles = useGameStore((s) => s.lastMoveTiles);
   const ghostTiles = useGameStore((s) => s.ghostTiles);
+  const cursorPosition = useGameStore((s) => s.cursorPosition);
   const autoZoomEnabled = useSettingsStore((s) => s.autoZoom);
   const scorePreviewEnabled = useSettingsStore((s) => s.scorePreview);
   const lastMoveHighlightEnabled = useSettingsStore((s) => s.lastMoveHighlight);
@@ -204,6 +205,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
           row.map((cell, colIdx) => {
             const isInWord = wordSet.has(`${rowIdx},${colIdx}`);
             const isLastMove = lastMoveHighlightEnabled && lastMoveSet.has(`${rowIdx},${colIdx}`);
+            const isCursor = cursorPosition?.row === rowIdx && cursorPosition?.col === colIdx;
             return (
               <BoardCell
                 key={`${rowIdx}-${colIdx}`}
@@ -212,6 +214,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
                 ghostTile={ghostTileMap.get(`${rowIdx},${colIdx}`)}
                 isSelected={false}
                 isLastMove={isLastMove}
+                isCursor={isCursor}
                 pendingEdges={
                   isInWord
                     ? {
