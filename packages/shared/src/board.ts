@@ -44,29 +44,6 @@ function isOccupied(board: Board, row: number, col: number): boolean {
   return isInBounds(row, col) && board[row][col].tile !== null;
 }
 
-/**
- * Get the letter at a position, checking the new tiles first, then the board.
- * Returns null if the position is empty (no tile on board and not in newTiles).
- */
-function getLetterAt(
-  board: Board,
-  row: number,
-  col: number,
-  newTiles: PlacedTile[],
-): string | null {
-  // Check new tiles first
-  for (const t of newTiles) {
-    if (t.row === row && t.col === col) {
-      return t.designatedLetter;
-    }
-  }
-  // Check existing board
-  if (isInBounds(row, col) && board[row][col].tile !== null) {
-    return board[row][col].tile!.designatedLetter;
-  }
-  return null;
-}
-
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -119,12 +96,15 @@ export function isValidPlacement(
 
   // Check contiguity: every cell between first and last must be occupied
   // (either by a new tile or an existing board tile)
+  // Pre-compute a Set for O(1) lookups of placed tiles
+  const placedSet = new Set(tiles.map((t) => `${t.row},${t.col}`));
+
   if (allSameRow) {
     const row = sorted[0].row;
     const minCol = sorted[0].col;
     const maxCol = sorted[sorted.length - 1].col;
     for (let col = minCol; col <= maxCol; col++) {
-      const hasNewTile = tiles.some((t) => t.row === row && t.col === col);
+      const hasNewTile = placedSet.has(`${row},${col}`);
       const hasExistingTile = isOccupied(board, row, col);
       if (!hasNewTile && !hasExistingTile) {
         return { valid: false, reason: 'Tiles must form a contiguous line' };
@@ -135,7 +115,7 @@ export function isValidPlacement(
     const minRow = sorted[0].row;
     const maxRow = sorted[sorted.length - 1].row;
     for (let row = minRow; row <= maxRow; row++) {
-      const hasNewTile = tiles.some((t) => t.row === row && t.col === col);
+      const hasNewTile = placedSet.has(`${row},${col}`);
       const hasExistingTile = isOccupied(board, row, col);
       if (!hasNewTile && !hasExistingTile) {
         return { valid: false, reason: 'Tiles must form a contiguous line' };
@@ -253,6 +233,26 @@ export function getFormedWords(
 
   const words: { word: string; cells: { row: number; col: number }[] }[] = [];
 
+  // Pre-compute a tile Map for O(1) lookups instead of iterating through newTiles each time
+  const tileMap = new Map(tiles.map((t) => [`${t.row},${t.col}`, t]));
+
+  /**
+   * Optimized getLetterAt using pre-computed Map for O(1) lookups.
+   */
+  function getLetterAtOptimized(row: number, col: number): string | null {
+    // Check new tiles first using Map
+    const key = `${row},${col}`;
+    const newTile = tileMap.get(key);
+    if (newTile) {
+      return newTile.designatedLetter;
+    }
+    // Check existing board
+    if (isInBounds(row, col) && board[row][col].tile !== null) {
+      return board[row][col].tile!.designatedLetter;
+    }
+    return null;
+  }
+
   /**
    * Read a word along a direction starting from a position.
    * dr/dc define the direction to scan (e.g., 0,1 = horizontal right).
@@ -267,7 +267,7 @@ export function getFormedWords(
     // Walk backward to find the beginning of the word
     let r = startRow;
     let c = startCol;
-    while (isInBounds(r - dr, c - dc) && getLetterAt(board, r - dr, c - dc, tiles) !== null) {
+    while (isInBounds(r - dr, c - dc) && getLetterAtOptimized(r - dr, c - dc) !== null) {
       r -= dr;
       c -= dc;
     }
@@ -275,8 +275,8 @@ export function getFormedWords(
     // Walk forward to collect the word
     const word: string[] = [];
     const cells: { row: number; col: number }[] = [];
-    while (isInBounds(r, c) && getLetterAt(board, r, c, tiles) !== null) {
-      word.push(getLetterAt(board, r, c, tiles)!);
+    while (isInBounds(r, c) && getLetterAtOptimized(r, c) !== null) {
+      word.push(getLetterAtOptimized(r, c)!);
       cells.push({ row: r, col: c });
       r += dr;
       c += dc;

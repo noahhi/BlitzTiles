@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
@@ -6,7 +7,7 @@ import type { Tile } from '@blitztiles/shared';
 import { useGameStore } from '../../hooks/useGameStore';
 import './TileRack.css';
 
-function RackTile({ tile }: { tile: Tile }) {
+export const RackTile = React.memo(function RackTile({ tile }: { tile: Tile }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tile.id,
     data: { tile, type: 'rack-tile' },
@@ -44,12 +45,12 @@ function RackTile({ tile }: { tile: Tile }) {
       {tile.value > 0 && <span className="rack-tile-value">{tile.value}</span>}
     </div>
   );
-}
+});
 
 export function TileRack() {
   const currentHand = useGameStore((s) => s.currentHand);
   const phase = useGameStore((s) => s.phase);
-  const tileIds = currentHand.map((t) => t.id);
+  const tileIds = useMemo(() => currentHand.map((t) => t.id), [currentHand]);
 
   const { setNodeRef, isOver } = useDroppable({
     id: 'rack-drop-zone',

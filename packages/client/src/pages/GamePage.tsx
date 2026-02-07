@@ -27,6 +27,15 @@ import { loadSession, clearSession } from '../hooks/sessionPersistence';
 import type { PersistedSession } from '../hooks/sessionPersistence';
 import './GamePage.css';
 
+/**
+ * Resolves tile ID from drag-and-drop events.
+ * Board tiles are prefixed with 'board-' to make them unique in the DnD context.
+ */
+function resolveTileId(rawId: string | number): string {
+  const str = String(rawId);
+  return str.startsWith('board-') ? str.slice(6) : str;
+}
+
 export function GamePage() {
   const [searchParams] = useSearchParams();
   const gameMode = searchParams.get('mode') as 'host' | 'guest' | null;
@@ -97,8 +106,7 @@ function LocalGame() {
 
       // Return board tile to rack
       if (activeType === 'board-tile' && over.id === 'rack-drop-zone') {
-        const rawId = active.id as string;
-        const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
+        const tileId = resolveTileId(active.id);
         removePlacedTile(tileId);
         return;
       }
@@ -110,19 +118,18 @@ function LocalGame() {
         over.id.toString().startsWith('cell-')
       ) {
         const [, row, col] = over.id.toString().split('-');
-        const rawId = active.id as string;
-        const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
+        const tileId = resolveTileId(active.id);
         const tile = currentHand.find((t) => t.id === tileId);
-        placeTile(tileId, parseInt(row), parseInt(col));
+        placeTile(tileId, parseInt(row, 10), parseInt(col, 10));
         if (tile?.isBlank) {
-          setPendingBlank({ tileId, row: parseInt(row), col: parseInt(col) });
+          setPendingBlank({ tileId, row: parseInt(row, 10), col: parseInt(col, 10) });
         }
       }
     },
     [currentHand, placeTile, reorderHand, removePlacedTile],
   );
 
-  const resolvedTileId = activeTileId?.startsWith('board-') ? activeTileId.slice(6) : activeTileId;
+  const resolvedTileId = activeTileId ? resolveTileId(activeTileId) : null;
   const activeTile = currentHand.find((t) => t.id === resolvedTileId) || null;
 
   if (!dictionaryLoaded || phase === 'waiting') {
@@ -328,8 +335,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
 
       // Return board tile to rack
       if (activeType === 'board-tile' && over.id === 'rack-drop-zone') {
-        const rawId = active.id as string;
-        const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
+        const tileId = resolveTileId(active.id);
         removePlacedTile(tileId);
         return;
       }
@@ -341,19 +347,18 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
         over.id.toString().startsWith('cell-')
       ) {
         const [, row, col] = over.id.toString().split('-');
-        const rawId = active.id as string;
-        const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
+        const tileId = resolveTileId(active.id);
         const tile = currentHand.find((t) => t.id === tileId);
-        placeTile(tileId, parseInt(row), parseInt(col));
+        placeTile(tileId, parseInt(row, 10), parseInt(col, 10));
         if (tile?.isBlank) {
-          setPendingBlank({ tileId, row: parseInt(row), col: parseInt(col) });
+          setPendingBlank({ tileId, row: parseInt(row, 10), col: parseInt(col, 10) });
         }
       }
     },
     [currentHand, placeTile, reorderHand, removePlacedTile],
   );
 
-  const resolvedTileId = activeTileId?.startsWith('board-') ? activeTileId.slice(6) : activeTileId;
+  const resolvedTileId = activeTileId ? resolveTileId(activeTileId) : null;
   const activeTile = currentHand.find((t) => t.id === resolvedTileId) || null;
 
   const handleAbandon = () => {

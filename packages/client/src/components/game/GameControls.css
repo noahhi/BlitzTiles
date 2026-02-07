@@ -46,24 +46,6 @@
   }
 }
 
-.score-preview {
-  font-size: 0.8rem;
-  color: var(--success);
-  text-align: center;
-  font-weight: 600;
-  margin-top: 8px;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 .score-popup {
   position: fixed;
   top: 50%;
@@ -105,44 +87,6 @@
   padding-bottom: 4px;
   pointer-events: none;
   z-index: 11;
-}
-
-.exchange-tiles {
-  display: flex;
-  gap: 4px;
-  justify-content: center;
-}
-
-.exchange-tile {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--tile-bg);
-  color: var(--tile-text);
-  border: 2px solid var(--tile-border);
-  border-radius: 4px;
-  cursor: pointer;
-  position: relative;
-  font-weight: 700;
-  font-size: 1.1rem;
-  transition: all 0.15s ease;
-}
-
-.exchange-tile.selected {
-  border-color: var(--accent);
-  background: #ffcccc;
-  transform: translateY(-3px);
-  box-shadow: 0 4px 8px rgba(233, 69, 96, 0.3);
-}
-
-.ex-tile-val {
-  position: absolute;
-  bottom: 1px;
-  right: 2px;
-  font-size: 0.45rem;
-  font-weight: 600;
 }
 
 .exchange-actions {

@@ -1,10 +1,36 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../hooks/useGameStore';
 import { useTimer } from '../../hooks/useTimer';
 import { useSettingsStore } from '../../hooks/useSettingsStore';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import './GameHeader.css';
+
+const TimerDisplay = React.memo(function TimerDisplay() {
+  const timerUrgency = useSettingsStore((s) => s.timerUrgency);
+  const { display, urgency, progress, isRunning } = useTimer();
+
+  if (!isRunning) return null;
+
+  return (
+    <>
+      {timerUrgency && urgency === 'critical' && <div className="critical-screen-flash" />}
+      <div className={`turn-timer ${timerUrgency ? urgency : 'normal'}`}>
+        <svg className="timer-ring" viewBox="0 0 40 40">
+          <circle className="timer-ring-bg" cx="20" cy="20" r="17" />
+          <circle
+            className="timer-ring-progress"
+            cx="20"
+            cy="20"
+            r="17"
+            strokeDasharray={`${(1 - progress) * 106.8} 106.8`}
+          />
+        </svg>
+        <span className="timer-digits">{display}</span>
+      </div>
+    </>
+  );
+});
 
 export function GameHeader() {
   const players = useGameStore((s) => s.players);
@@ -13,10 +39,8 @@ export function GameHeader() {
   const phase = useGameStore((s) => s.phase);
   const mode = useGameStore((s) => s.mode);
   const playerIndex = useGameStore((s) => s.playerIndex);
-  const timer = useTimer();
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
-  const timerUrgency = useSettingsStore((s) => s.timerUrgency);
 
   if (players.length < 2) return null;
 
@@ -38,9 +62,7 @@ export function GameHeader() {
 
   return (
     <div className="game-header">
-      {timerUrgency && timer.urgency === 'critical' && timer.isRunning && (
-        <div className="critical-screen-flash" />
-      )}
+      <TimerDisplay />
       <button className="leave-btn" onClick={handleLeave} title="Back to menu">
         &#x2190;
       </button>
@@ -58,21 +80,7 @@ export function GameHeader() {
       </div>
 
       <div className="game-info-center">
-        {timer.isRunning && (
-          <div className={`turn-timer ${timerUrgency ? timer.urgency : 'normal'}`}>
-            <svg className="timer-ring" viewBox="0 0 40 40">
-              <circle className="timer-ring-bg" cx="20" cy="20" r="17" />
-              <circle
-                className="timer-ring-progress"
-                cx="20"
-                cy="20"
-                r="17"
-                strokeDasharray={`${(1 - timer.progress) * 106.8} 106.8`}
-              />
-            </svg>
-            <span className="timer-digits">{timer.display}</span>
-          </div>
-        )}
+        <TimerDisplay />
         <div className="bag-count">{tileBagCount} tiles left</div>
         {phase === 'playing' && (
           <div className={`turn-indicator ${isMyTurn ? 'your-turn' : ''}`}>
