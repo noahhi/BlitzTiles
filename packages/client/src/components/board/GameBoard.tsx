@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { PlacedTile } from '@blitztiles/shared';
 import { BoardCell } from './BoardCell';
+import { BlankTilePicker } from '../tiles/BlankTilePicker';
 import { useGameStore } from '../../hooks/useGameStore';
 import './GameBoard.css';
 
@@ -7,9 +9,16 @@ export function GameBoard() {
   const board = useGameStore((s) => s.board);
   const placedTiles = useGameStore((s) => s.placedTiles);
   const selectedTileId = useGameStore((s) => s.selectedTileId);
+  const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
   const phase = useGameStore((s) => s.phase);
+
+  const [pendingBlank, setPendingBlank] = useState<{
+    tileId: string;
+    row: number;
+    col: number;
+  } | null>(null);
 
   if (!board || board.length === 0) return null;
 
@@ -22,14 +31,17 @@ export function GameBoard() {
 
     const pending = getPendingTile(row, col);
     if (pending) {
-      // Clicking a pending tile removes it from the board
       removePlacedTile(pending.id);
       return;
     }
 
-    // If a tile is selected and the cell is empty, place it
     if (selectedTileId && !board[row][col].tile) {
-      placeTile(selectedTileId, row, col);
+      const tile = currentHand.find((t) => t.id === selectedTileId);
+      if (tile?.isBlank) {
+        setPendingBlank({ tileId: selectedTileId, row, col });
+      } else {
+        placeTile(selectedTileId, row, col);
+      }
     }
   };
 
@@ -48,6 +60,15 @@ export function GameBoard() {
           )),
         )}
       </div>
+      {pendingBlank && (
+        <BlankTilePicker
+          onSelect={(letter) => {
+            placeTile(pendingBlank.tileId, pendingBlank.row, pendingBlank.col, letter);
+            setPendingBlank(null);
+          }}
+          onCancel={() => setPendingBlank(null)}
+        />
+      )}
     </div>
   );
 }

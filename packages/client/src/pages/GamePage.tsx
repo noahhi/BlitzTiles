@@ -9,13 +9,15 @@ import {
   useSensors,
   rectIntersection,
 } from '@dnd-kit/core';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { GameBoard } from '../components/board/GameBoard';
 import { TileRack } from '../components/tiles/TileRack';
 import { GameHeader } from '../components/game/GameHeader';
 import { GameControls } from '../components/game/GameControls';
 import { GameOverModal } from '../components/game/GameOverModal';
+import { BlankTilePicker } from '../components/tiles/BlankTilePicker';
+import { QRCodeSVG } from 'qrcode.react';
 import { useGameStore } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
 import './GamePage.css';
@@ -40,10 +42,16 @@ function LocalGame() {
   const phase = useGameStore((s) => s.phase);
   const initLocalGame = useGameStore((s) => s.initLocalGame);
   const dictionaryLoaded = useGameStore((s) => s.dictionaryLoaded);
+  const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
   const reorderHand = useGameStore((s) => s.reorderHand);
-  const currentHand = useGameStore((s) => s.currentHand);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
+
+  const [pendingBlank, setPendingBlank] = useState<{
+    tileId: string;
+    row: number;
+    col: number;
+  } | null>(null);
 
   // Configure sensors for DndContext
   const sensors = useSensors(
@@ -64,26 +72,35 @@ function LocalGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
 
-    if (!over) return;
+      if (!over) return;
 
-    if (active.id === over.id) return;
+      if (active.id === over.id) return;
 
-    const activeType = active.data.current?.type;
-    const overType = over.data.current?.type;
+      const activeType = active.data.current?.type;
+      const overType = over.data.current?.type;
 
-    if (activeType === 'rack-tile' && overType === 'rack-tile') {
-      reorderHand(active.id as string, over.id as string);
-    } else if (
-      (activeType === 'rack-tile' || activeType === 'board-tile') &&
-      over.id.toString().startsWith('cell-')
-    ) {
-      const [_, row, col] = over.id.toString().split('-');
-      placeTile(active.id as string, parseInt(row), parseInt(col));
-    }
-  };
+      if (activeType === 'rack-tile' && overType === 'rack-tile') {
+        reorderHand(active.id as string, over.id as string);
+      } else if (
+        (activeType === 'rack-tile' || activeType === 'board-tile') &&
+        over.id.toString().startsWith('cell-')
+      ) {
+        const [, row, col] = over.id.toString().split('-');
+        const tileId = active.id as string;
+        const tile = currentHand.find((t) => t.id === tileId);
+        if (tile?.isBlank) {
+          setPendingBlank({ tileId, row: parseInt(row), col: parseInt(col) });
+        } else {
+          placeTile(tileId, parseInt(row), parseInt(col));
+        }
+      }
+    },
+    [currentHand, placeTile, reorderHand],
+  );
 
   const activeTile = currentHand.find((t) => t.id === activeTileId) || null;
 
@@ -118,15 +135,20 @@ function LocalGame() {
       <DragOverlay dropAnimation={null}>
         {activeTile ? (
           <div className="drag-overlay-tile">
-            <span className="rack-tile-letter">
-              {activeTile.isBlank ? '' : activeTile.letter}
-            </span>
-            {activeTile.value > 0 && (
-              <span className="rack-tile-value">{activeTile.value}</span>
-            )}
+            <span className="rack-tile-letter">{activeTile.isBlank ? '' : activeTile.letter}</span>
+            {activeTile.value > 0 && <span className="rack-tile-value">{activeTile.value}</span>}
           </div>
         ) : null}
       </DragOverlay>
+      {pendingBlank && (
+        <BlankTilePicker
+          onSelect={(letter) => {
+            placeTile(pendingBlank.tileId, pendingBlank.row, pendingBlank.col, letter);
+            setPendingBlank(null);
+          }}
+          onCancel={() => setPendingBlank(null)}
+        />
+      )}
     </DndContext>
   );
 }
@@ -145,12 +167,17 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const initGuestGame = useGameStore((s) => s.initGuestGame);
   const setConnection = useGameStore((s) => s.setConnection);
   const handleNetworkMessage = useGameStore((s) => s.handleNetworkMessage);
+  const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
   const reorderHand = useGameStore((s) => s.reorderHand);
-  const currentHand = useGameStore((s) => s.currentHand);
 
   const [initialized, setInitialized] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
+  const [pendingBlank, setPendingBlank] = useState<{
+    tileId: string;
+    row: number;
+    col: number;
+  } | null>(null);
 
   // Configure sensors for DndContext
   const sensors = useSensors(
@@ -194,26 +221,35 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const gameReady =
     connection.status === 'connected' && initialized && dictionaryLoaded && phase === 'playing';
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
 
-    if (!over) return;
+      if (!over) return;
 
-    if (active.id === over.id) return;
+      if (active.id === over.id) return;
 
-    const activeType = active.data.current?.type;
-    const overType = over.data.current?.type;
+      const activeType = active.data.current?.type;
+      const overType = over.data.current?.type;
 
-    if (activeType === 'rack-tile' && overType === 'rack-tile') {
-      reorderHand(active.id as string, over.id as string);
-    } else if (
-      (activeType === 'rack-tile' || activeType === 'board-tile') &&
-      over.id.toString().startsWith('cell-')
-    ) {
-      const [_, row, col] = over.id.toString().split('-');
-      placeTile(active.id as string, parseInt(row), parseInt(col));
-    }
-  };
+      if (activeType === 'rack-tile' && overType === 'rack-tile') {
+        reorderHand(active.id as string, over.id as string);
+      } else if (
+        (activeType === 'rack-tile' || activeType === 'board-tile') &&
+        over.id.toString().startsWith('cell-')
+      ) {
+        const [, row, col] = over.id.toString().split('-');
+        const tileId = active.id as string;
+        const tile = currentHand.find((t) => t.id === tileId);
+        if (tile?.isBlank) {
+          setPendingBlank({ tileId, row: parseInt(row), col: parseInt(col) });
+        } else {
+          placeTile(tileId, parseInt(row), parseInt(col));
+        }
+      }
+    },
+    [currentHand, placeTile, reorderHand],
+  );
 
   const activeTile = currentHand.find((t) => t.id === activeTileId) || null;
 
@@ -223,14 +259,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
         <div className="online-lobby">
           {connection.status === 'connecting' && <div className="loading-text">Connecting...</div>}
 
-          {connection.status === 'waiting' && (
-            <>
-              <div className="lobby-label">Room Code</div>
-              <div className="room-code">{connection.roomCode}</div>
-              <div className="lobby-hint">Share this code with your opponent</div>
-              <div className="loading-text">Waiting for opponent...</div>
-            </>
-          )}
+          {connection.status === 'waiting' && <LobbyShare roomCode={connection.roomCode ?? ''} />}
 
           {connection.status === 'connected' && !gameReady && (
             <div className="loading-text">Starting game...</div>
@@ -282,15 +311,72 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
       <DragOverlay dropAnimation={null}>
         {activeTile ? (
           <div className="drag-overlay-tile">
-            <span className="rack-tile-letter">
-              {activeTile.isBlank ? '' : activeTile.letter}
-            </span>
-            {activeTile.value > 0 && (
-              <span className="rack-tile-value">{activeTile.value}</span>
-            )}
+            <span className="rack-tile-letter">{activeTile.isBlank ? '' : activeTile.letter}</span>
+            {activeTile.value > 0 && <span className="rack-tile-value">{activeTile.value}</span>}
           </div>
         ) : null}
       </DragOverlay>
+      {pendingBlank && (
+        <BlankTilePicker
+          onSelect={(letter) => {
+            placeTile(pendingBlank.tileId, pendingBlank.row, pendingBlank.col, letter);
+            setPendingBlank(null);
+          }}
+          onCancel={() => setPendingBlank(null)}
+        />
+      )}
     </DndContext>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Lobby share widget (QR code + copy link)
+// ---------------------------------------------------------------------------
+
+function LobbyShare({ roomCode }: { roomCode: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl = `${window.location.origin}/game?mode=guest&code=${roomCode}`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: select the text so the user can copy manually
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join my BlitzTiles game', url: shareUrl });
+      } catch {
+        // User cancelled or share failed
+      }
+    }
+  };
+
+  return (
+    <>
+      <div className="lobby-label">Room Code</div>
+      <div className="room-code">{roomCode}</div>
+      <div className="lobby-qr">
+        <QRCodeSVG value={shareUrl} size={160} bgColor="transparent" fgColor="#ffffff" />
+      </div>
+      <div className="lobby-share-buttons">
+        <button className="btn-copy-link" onClick={handleCopy}>
+          {copied ? 'Copied!' : 'Copy Link'}
+        </button>
+        {typeof navigator.share === 'function' && (
+          <button className="btn-copy-link" onClick={handleShare}>
+            Share
+          </button>
+        )}
+      </div>
+      <div className="lobby-hint">Share this link or scan the QR code</div>
+      <div className="loading-text">Waiting for opponent...</div>
+    </>
   );
 }

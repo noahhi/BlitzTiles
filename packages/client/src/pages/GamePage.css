@@ -71,6 +71,38 @@
   margin-bottom: 24px;
 }
 
+.lobby-qr {
+  margin: 16px 0;
+}
+
+.lobby-share-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.btn-copy-link {
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--accent, #e94560);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-copy-link:hover {
+  opacity: 0.85;
+}
+
+.btn-copy-link:active {
+  opacity: 0.7;
+}
+
 .error-box {
   text-align: center;
   color: var(--danger);
