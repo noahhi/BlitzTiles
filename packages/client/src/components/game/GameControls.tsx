@@ -80,12 +80,13 @@ export function GameControls() {
         </div>
       ) : (
         <div className="control-buttons">
-          <button className="btn-secondary" onClick={shuffleHand}>
-            Shuffle
-          </button>
-          {hasPlacedTiles && (
+          {hasPlacedTiles ? (
             <button className="btn-secondary" onClick={recallTiles}>
               Recall
+            </button>
+          ) : (
+            <button className="btn-secondary" onClick={shuffleHand}>
+              Shuffle
             </button>
           )}
           <button
