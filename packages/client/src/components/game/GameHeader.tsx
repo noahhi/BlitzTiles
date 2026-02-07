@@ -6,16 +6,23 @@ import { useSettingsStore } from '../../hooks/useSettingsStore';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import './GameHeader.css';
 
-const TimerDisplay = React.memo(function TimerDisplay() {
+const TimerDisplay = React.memo(function TimerDisplay({
+  isSpectator = false,
+}: {
+  isSpectator?: boolean;
+}) {
   const timerUrgency = useSettingsStore((s) => s.timerUrgency);
   const { display, urgency, progress, isRunning } = useTimer();
 
   if (!isRunning) return null;
 
+  // Spectators see the timer but without urgency effects
+  const showUrgency = timerUrgency && !isSpectator;
+
   return (
     <>
-      {timerUrgency && urgency === 'critical' && <div className="critical-screen-flash" />}
-      <div className={`turn-timer ${timerUrgency ? urgency : 'normal'}`}>
+      {showUrgency && urgency === 'critical' && <div className="critical-screen-flash" />}
+      <div className={`turn-timer ${showUrgency ? urgency : 'normal'}`}>
         <svg className="timer-ring" viewBox="0 0 40 40">
           <circle className="timer-ring-bg" cx="20" cy="20" r="17" />
           <circle
@@ -74,7 +81,7 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
 
   return (
     <div className="game-header">
-      <TimerDisplay />
+      <TimerDisplay isSpectator={isSpectator} />
       <button className="leave-btn" onClick={handleLeave} title="Back to menu">
         &#x2190;
       </button>
@@ -92,7 +99,7 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
       </div>
 
       <div className="game-info-center">
-        <TimerDisplay />
+        <TimerDisplay isSpectator={isSpectator} />
         <div className="bag-count">{tileBagCount} tiles left</div>
         {phase === 'playing' && (
           <div className={`turn-indicator ${!isSpectator && isMyTurn ? 'your-turn' : ''}`}>
