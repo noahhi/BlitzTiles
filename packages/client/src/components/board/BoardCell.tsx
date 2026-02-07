@@ -12,6 +12,7 @@ interface EdgeFlags {
 interface BoardCellProps {
   cell: BoardCellType;
   pendingTile?: PlacedTile;
+  ghostTile?: PlacedTile;
   isSelected: boolean;
   isLastMove: boolean;
   pendingEdges?: EdgeFlags;
@@ -30,6 +31,7 @@ const BONUS_LABELS: Record<NonNullable<BonusType>, string> = {
 export function BoardCell({
   cell,
   pendingTile,
+  ghostTile,
   isSelected,
   isLastMove,
   pendingEdges,
@@ -111,6 +113,11 @@ export function BoardCell({
         >
           <span className="tile-letter">{tile.designatedLetter || tile.letter}</span>
           {tile.value > 0 && <span className="tile-value">{tile.value}</span>}
+        </div>
+      ) : ghostTile ? (
+        <div className="cell-tile ghost-tile">
+          <span className="tile-letter">{ghostTile.designatedLetter || ghostTile.letter}</span>
+          {ghostTile.value > 0 && <span className="tile-value">{ghostTile.value}</span>}
         </div>
       ) : (
         <>

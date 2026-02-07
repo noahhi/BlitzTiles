@@ -103,6 +103,14 @@
   cursor: grabbing;
 }
 
+.ghost-tile {
+  background: var(--tile-bg);
+  color: var(--tile-text);
+  opacity: 0.35;
+  border: 1px dashed var(--tile-border);
+  pointer-events: none;
+}
+
 /* Last-move outline: unified rectangle that fades over 10s */
 .board-cell.last-move::after {
   content: '';
