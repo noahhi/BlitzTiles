@@ -93,24 +93,21 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
         {preview.score !== null &&
           placedTiles.length > 0 &&
           (() => {
-            // Position badge at end of word: rightmost for horizontal, bottommost for vertical
+            // Position badge on the last tile of the word
             const rows = placedTiles.map((t) => t.row);
             const cols = placedTiles.map((t) => t.col);
             const isHorizontal = new Set(rows).size === 1;
             const endRow = isHorizontal ? rows[0] : Math.max(...rows);
             const endCol = isHorizontal ? Math.max(...cols) : cols[0];
-            // Place badge in the next cell after the word end
-            const badgeRow = isHorizontal ? endRow : endRow + 1;
-            const badgeCol = isHorizontal ? endCol + 1 : endCol;
             return (
               <div
                 className="score-badge"
                 style={{
-                  gridRow: badgeRow + 1,
-                  gridColumn: badgeCol + 1,
+                  gridRow: endRow + 1,
+                  gridColumn: endCol + 1,
                 }}
               >
-                +{preview.score}
+                <span>+{preview.score}</span>
               </div>
             );
           })()}
