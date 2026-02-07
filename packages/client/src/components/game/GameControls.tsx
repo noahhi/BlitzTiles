@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '../../hooks/useGameStore';
+import { useSettingsStore } from '../../hooks/useSettingsStore';
 import './GameControls.css';
 
 export function GameControls() {
@@ -17,6 +18,7 @@ export function GameControls() {
   const exchangeMode = useGameStore((s) => s.exchangeMode);
   const exchangeSelection = useGameStore((s) => s.exchangeSelection);
   const setExchangeMode = useGameStore((s) => s.setExchangeMode);
+  const leftHanded = useSettingsStore((s) => s.leftHanded);
 
   // Track which popup has been dismissed via onAnimationEnd
   const [dismissedAt, setDismissedAt] = useState(0);
@@ -79,16 +81,7 @@ export function GameControls() {
           </div>
         </div>
       ) : (
-        <div className="control-buttons">
-          {hasPlacedTiles ? (
-            <button className="btn-secondary" onClick={recallTiles}>
-              Recall
-            </button>
-          ) : (
-            <button className="btn-secondary" onClick={shuffleHand}>
-              Shuffle
-            </button>
-          )}
+        <div className={`control-buttons${leftHanded ? ' left-handed' : ''}`}>
           <button
             className="btn-secondary"
             onClick={handleExchangeToggle}
@@ -99,6 +92,15 @@ export function GameControls() {
           <button className="btn-secondary" onClick={passTurnAction}>
             Pass
           </button>
+          {hasPlacedTiles ? (
+            <button className="btn-secondary" onClick={recallTiles}>
+              Recall
+            </button>
+          ) : (
+            <button className="btn-secondary" onClick={shuffleHand}>
+              Shuffle
+            </button>
+          )}
           <button className="btn-primary" onClick={submitMoveAction} disabled={!hasPlacedTiles}>
             Submit
           </button>
