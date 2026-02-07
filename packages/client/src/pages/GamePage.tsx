@@ -61,11 +61,14 @@ function LocalGame() {
 
   // Configure sensors for DndContext
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 150,
-        tolerance: 8,
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor),
@@ -117,7 +120,8 @@ function LocalGame() {
     [currentHand, placeTile, reorderHand, removePlacedTile],
   );
 
-  const activeTile = currentHand.find((t) => t.id === activeTileId) || null;
+  const resolvedTileId = activeTileId?.startsWith('board-') ? activeTileId.slice(6) : activeTileId;
+  const activeTile = currentHand.find((t) => t.id === resolvedTileId) || null;
 
   if (!dictionaryLoaded || phase === 'waiting') {
     return (
@@ -201,11 +205,14 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
 
   // Configure sensors for DndContext
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 150,
-        tolerance: 8,
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor),
@@ -280,7 +287,8 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     [currentHand, placeTile, reorderHand, removePlacedTile],
   );
 
-  const activeTile = currentHand.find((t) => t.id === activeTileId) || null;
+  const resolvedTileId = activeTileId?.startsWith('board-') ? activeTileId.slice(6) : activeTileId;
+  const activeTile = currentHand.find((t) => t.id === resolvedTileId) || null;
 
   if (!gameReady) {
     return (

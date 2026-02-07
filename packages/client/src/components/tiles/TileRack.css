@@ -92,6 +92,8 @@
   position: relative;
   font-weight: 700;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
-  transform: scale(1.15) rotate(-4deg);
+  transform: scale(1.2);
   pointer-events: none;
+  will-change: transform;
+  backface-visibility: hidden;
 }

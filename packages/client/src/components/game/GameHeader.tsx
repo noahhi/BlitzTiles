@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../hooks/useGameStore';
 import { useTimer } from '../../hooks/useTimer';
 import './GameHeader.css';
@@ -10,8 +11,16 @@ export function GameHeader() {
   const mode = useGameStore((s) => s.mode);
   const playerIndex = useGameStore((s) => s.playerIndex);
   const timer = useTimer();
+  const navigate = useNavigate();
 
   if (players.length < 2) return null;
+
+  const handleLeave = () => {
+    if (phase === 'playing') {
+      if (!window.confirm('Leave the game? Your progress will be lost.')) return;
+    }
+    navigate('/');
+  };
 
   const isOnline = mode === 'host' || mode === 'guest';
   const isMyTurn = isOnline ? currentPlayerIndex === playerIndex : true; // always "your turn" in local (shared device)
@@ -25,6 +34,9 @@ export function GameHeader() {
   return (
     <div className="game-header">
       {timer.urgency === 'critical' && timer.isRunning && <div className="critical-screen-flash" />}
+      <button className="leave-btn" onClick={handleLeave} title="Back to menu">
+        &#x2190;
+      </button>
       <div
         className={`player-info ${currentPlayerIndex === 0 ? 'active' : ''} ${isOnline && playerIndex === 0 ? 'you' : ''}`}
       >

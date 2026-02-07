@@ -138,11 +138,6 @@ export function GameControls() {
           </button>
         </div>
       )}
-      {preview.isValid && preview.words.length > 0 && (
-        <div className="score-preview">
-          {preview.words.join(', ')} = +{preview.score}
-        </div>
-      )}
     </div>
   );
 }
