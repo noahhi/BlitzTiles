@@ -238,6 +238,10 @@ function OnlineGame({
   useWakeLock(phase === 'playing');
 
   const [initialized, setInitialized] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<'classic' | 'racing'>(
+    variant === 'racing' ? 'racing' : 'classic',
+  );
+  const [gameStarted, setGameStarted] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
   const [pendingBlank, setPendingBlank] = useState<{
     tileId: string;
@@ -307,15 +311,8 @@ function OnlineGame({
     // Fresh game init (no recovery)
     const roomCode = connection.roomCode || '';
     if (role === 'host') {
-      const config: GameConfig | undefined =
-        variant === 'racing'
-          ? {
-              ...DEFAULT_GAME_CONFIG,
-              gameVariant: 'racing',
-              racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
-            }
-          : undefined;
-      initHostGame(roomCode, config).then(() => setInitialized(true));
+      // Host waits for user to click "Start Game" - don't auto-init
+      // (gameStarted state will trigger initialization)
     } else {
       initGuestGame(roomCode).then(() => {
         setInitialized(true);
@@ -324,6 +321,24 @@ function OnlineGame({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection.status]);
+
+  // Host: initialize game when "Start Game" is clicked
+  useEffect(() => {
+    if (role !== 'host' || !gameStarted || initialized) return;
+    if (connection.status !== 'waiting') return;
+
+    const roomCode = connection.roomCode || '';
+    const config: GameConfig | undefined =
+      selectedVariant === 'racing'
+        ? {
+            ...DEFAULT_GAME_CONFIG,
+            gameVariant: 'racing',
+            racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
+          }
+        : undefined;
+    initHostGame(roomCode, config).then(() => setInitialized(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameStarted, connection.status]);
 
   // Clear session on unmount (navigating away)
   useEffect(() => {
@@ -393,7 +408,16 @@ function OnlineGame({
         <div className="online-lobby">
           {connection.status === 'connecting' && <div className="loading-text">Connecting...</div>}
 
-          {connection.status === 'waiting' && <LobbyShare roomCode={connection.roomCode ?? ''} />}
+          {connection.status === 'waiting' &&
+            (role === 'host' && !gameStarted ? (
+              <GameModeSelector
+                selectedVariant={selectedVariant}
+                onVariantChange={setSelectedVariant}
+                onStartGame={() => setGameStarted(true)}
+              />
+            ) : (
+              <LobbyShare roomCode={connection.roomCode ?? ''} />
+            ))}
 
           {connection.status === 'reconnecting' && (
             <div className="reconnect-box">
@@ -486,6 +510,45 @@ function OnlineGame({
         />
       )}
     </DndContext>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Game mode selector (host lobby)
+// ---------------------------------------------------------------------------
+
+function GameModeSelector({
+  selectedVariant,
+  onVariantChange,
+  onStartGame,
+}: {
+  selectedVariant: 'classic' | 'racing';
+  onVariantChange: (variant: 'classic' | 'racing') => void;
+  onStartGame: () => void;
+}) {
+  return (
+    <>
+      <div className="lobby-label">Choose Game Mode</div>
+      <div className="mode-selector">
+        <button
+          className={`mode-option ${selectedVariant === 'classic' ? 'selected' : ''}`}
+          onClick={() => onVariantChange('classic')}
+        >
+          <div className="mode-name">Classic</div>
+          <div className="mode-description">Turn-based word placement</div>
+        </button>
+        <button
+          className={`mode-option ${selectedVariant === 'racing' ? 'selected' : ''}`}
+          onClick={() => onVariantChange('racing')}
+        >
+          <div className="mode-name">Racing</div>
+          <div className="mode-description">Race to place words first</div>
+        </button>
+      </div>
+      <button className="btn-primary btn-start-game" onClick={onStartGame}>
+        Start Game
+      </button>
+    </>
   );
 }
 
