@@ -284,6 +284,15 @@ export function useGameConnection(
 
                 // Set up guest handlers
                 setupDataChannel(connection);
+
+                // If connection is already open, manually trigger connected state
+                if (connection.open) {
+                  clearRetryTimer();
+                  clearHostTimeout();
+                  hadConnectionRef.current = true;
+                  setState((prev) => ({ ...prev, status: 'connected' }));
+                  onConnectedRef.current?.();
+                }
               }
               dataHandlerSetup = true;
             }
