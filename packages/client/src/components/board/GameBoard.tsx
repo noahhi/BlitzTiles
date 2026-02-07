@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import type { PlacedTile } from '@blitztiles/shared';
 import { BoardCell } from './BoardCell';
 import { BlankTilePicker } from '../tiles/BlankTilePicker';
@@ -65,13 +65,22 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
           el.removeEventListener('transitionend', onEnd);
         };
         el.addEventListener('transitionend', onEnd);
-        // 4-tile radius = 9 tiles visible, scale = 15/9 ≈ 1.67
+        // Board scale for 4-tile visible radius: 15 total tiles / 9 visible tiles ≈ 1.67x zoom
         zoomToCell(tile.row, tile.col, 15 / 9, el);
       });
     }
   }, [placedTiles, zoomToCell, autoZoomEnabled]);
-  const lastMoveSet = new Set(lastMoveTiles.map((t) => `${t.row},${t.col}`));
-  const pendingSet = new Set(placedTiles.map((t) => `${t.row},${t.col}`));
+
+  // Memoize Set creation to avoid recreating on every render
+  const lastMoveSet = useMemo(
+    () => new Set(lastMoveTiles.map((t) => `${t.row},${t.col}`)),
+    [lastMoveTiles],
+  );
+  const pendingSet = useMemo(
+    () => new Set(placedTiles.map((t) => `${t.row},${t.col}`)),
+    [placedTiles],
+  );
+
   const preview = useScorePreview();
 
   const [pendingBlank, setPendingBlank] = useState<{
@@ -82,7 +91,8 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
 
   // Compute the full word being formed (including existing board tiles)
   // so the highlight outline encompasses the entire word, not just placed tiles
-  const wordSet = (() => {
+  // Memoized to avoid expensive recalculation on every render
+  const wordSet = useMemo(() => {
     if (placedTiles.length === 0 || board.length === 0) return pendingSet;
 
     const hasTile = (r: number, c: number) => board[r]?.[c]?.tile || pendingSet.has(`${r},${c}`);
@@ -112,7 +122,24 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
     }
 
     return cells.size > 0 ? cells : pendingSet;
-  })();
+  }, [placedTiles, board, pendingSet]);
+
+  // Create Map-based lookup for O(1) tile lookup instead of O(n) array.find()
+  // This is called 225 times per render (15x15 board), so performance matters
+  const pendingTileMap = useMemo(() => {
+    const map = new Map<string, PlacedTile>();
+    for (const tile of placedTiles) {
+      map.set(`${tile.row},${tile.col}`, tile);
+    }
+    return map;
+  }, [placedTiles]);
+
+  const getPendingTile = useCallback(
+    (row: number, col: number): PlacedTile | undefined => {
+      return pendingTileMap.get(`${row},${col}`);
+    },
+    [pendingTileMap],
+  );
 
   // Score badge goes on the last cell of the word
   const scoreBadgeCell =
@@ -134,10 +161,6 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
       : null;
 
   if (!board || board.length === 0) return null;
-
-  const getPendingTile = (row: number, col: number): PlacedTile | undefined => {
-    return placedTiles.find((t) => t.row === row && t.col === col);
-  };
 
   const handleCellClick = (row: number, col: number) => {
     if (phase !== 'playing') return;
