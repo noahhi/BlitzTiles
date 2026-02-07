@@ -36,9 +36,7 @@
   position: relative;
   user-select: none;
   -webkit-user-select: none;
-  transition:
-    box-shadow 0.2s ease,
-    opacity 0.2s ease;
+  transition: box-shadow 0.2s ease;
   font-weight: 700;
   touch-action: none;
   will-change: transform;

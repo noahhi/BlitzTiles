@@ -68,8 +68,7 @@ function LocalGame() {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 150,
-        tolerance: 5,
+        distance: 3,
       },
     }),
     useSensor(KeyboardSensor),
@@ -213,8 +212,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 150,
-        tolerance: 5,
+        distance: 3,
       },
     }),
     useSensor(KeyboardSensor),
