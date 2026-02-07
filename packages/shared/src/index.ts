@@ -65,3 +65,18 @@ export type {
   ExchangeError,
   ExchangeTilesResult,
 } from './gameEngine.js';
+
+// Racing engine
+export {
+  createRacingGame,
+  submitRacingMove,
+  handleRacingRoundTimeout,
+  checkRacingEndConditions,
+} from './racingEngine.js';
+
+export type {
+  RacingMoveResult,
+  RacingMoveError,
+  SubmitRacingMoveResult,
+  RacingTimeoutResult,
+} from './racingEngine.js';
