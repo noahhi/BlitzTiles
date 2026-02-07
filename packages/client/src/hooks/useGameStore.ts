@@ -230,6 +230,10 @@ export function filterStateForPlayer(state: GameState, forPlayer: number): Clien
     moveHistory: state.moveHistory,
     stateVersion: state.stateVersion,
     lastMoveTiles: state.lastMoveTiles,
+    sharedRack: state.sharedRack,
+    racingRound: state.racingRound,
+    consecutiveSkippedRounds: state.consecutiveSkippedRounds,
+    roundStartTimestamp: state.roundStartTimestamp,
   };
 }
 

@@ -73,6 +73,8 @@ export interface PlayerState {
 
 export type TimerMode = 'sudden_death' | 'time_penalty' | 'per_turn' | 'untimed';
 
+export type GameVariant = 'classic' | 'racing';
+
 export interface GameConfig {
   timerMode: TimerMode;
   /** Total time per player in ms. Ignored when timerMode is 'untimed' or 'per_turn'. */
@@ -81,6 +83,10 @@ export interface GameConfig {
   overtimePenaltyPerMinute: number;
   /** Time limit per turn in ms. Only used when timerMode is 'per_turn'. */
   turnTimeLimitMs: number;
+  /** Game variant: 'classic' (turn-based) or 'racing' (simultaneous). */
+  gameVariant: GameVariant;
+  /** Time limit per round in racing mode (ms). */
+  racingRoundTimeLimitMs: number;
 }
 
 export type GamePhase = 'waiting' | 'playing' | 'finished';
@@ -110,6 +116,16 @@ export interface GameState {
   stateVersion: number;
   /** Positions of tiles placed in the last move, for highlight display. */
   lastMoveTiles: { row: number; col: number }[];
+
+  // Racing mode fields (null when variant is 'classic')
+  /** Shared rack visible to both players in racing mode. */
+  sharedRack: Tile[] | null;
+  /** Current racing round number (1-based), null in classic mode. */
+  racingRound: number | null;
+  /** Number of consecutive rounds where neither player submitted. */
+  consecutiveSkippedRounds: number;
+  /** ISO timestamp of when the current round started, null in classic mode. */
+  roundStartTimestamp: string | null;
 }
 
 export interface MoveRecord {
@@ -131,7 +147,8 @@ export type ClientMessage =
   | { type: 'EXCHANGE'; tileIds: string[] }
   | { type: 'RESIGN' }
   | { type: 'REMATCH' }
-  | { type: 'SET_NAME'; name: string };
+  | { type: 'SET_NAME'; name: string }
+  | { type: 'PLACEMENT_UPDATE'; tiles: PlacedTile[] };
 
 // ---------------------------------------------------------------------------
 // Messages: Server → Client
@@ -161,6 +178,12 @@ export interface ClientGameState {
   moveHistory: MoveRecord[];
   stateVersion: number;
   lastMoveTiles: { row: number; col: number }[];
+
+  // Racing mode fields
+  sharedRack: Tile[] | null;
+  racingRound: number | null;
+  consecutiveSkippedRounds: number;
+  roundStartTimestamp: string | null;
 }
 
 export type ServerMessage =
@@ -168,4 +191,12 @@ export type ServerMessage =
   | { type: 'WAITING'; roomId: string; playerIndex: number }
   | { type: 'MOVE_REJECTED'; reason: string }
   | { type: 'TIMER_SYNC'; yourTimeMs: number; opponentTimeMs: number; turnStartTimestamp: string }
-  | { type: 'ERROR'; message: string };
+  | { type: 'ERROR'; message: string }
+  | { type: 'GHOST_TILES'; tiles: PlacedTile[] }
+  | {
+      type: 'ROUND_RESULT';
+      winnerIndex: number | null;
+      score: number;
+      words: string[];
+      roundNumber: number;
+    };
