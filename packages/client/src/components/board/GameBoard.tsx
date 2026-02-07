@@ -5,6 +5,7 @@ import { BlankTilePicker } from '../tiles/BlankTilePicker';
 import { useGameStore } from '../../hooks/useGameStore';
 import { usePinchZoom } from '../../hooks/usePinchZoom';
 import { useScorePreview } from '../../hooks/useScorePreview';
+import { useSettingsStore } from '../../hooks/useSettingsStore';
 import './GameBoard.css';
 
 export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
@@ -16,6 +17,9 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
   const phase = useGameStore((s) => s.phase);
   const lastMoveTiles = useGameStore((s) => s.lastMoveTiles);
+  const autoZoomEnabled = useSettingsStore((s) => s.autoZoom);
+  const scorePreviewEnabled = useSettingsStore((s) => s.scorePreview);
+  const lastMoveHighlightEnabled = useSettingsStore((s) => s.lastMoveHighlight);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const prevPlacedCount = useRef(placedTiles.length);
@@ -43,7 +47,13 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
     const wasEmpty = prevPlacedCount.current === 0;
     prevPlacedCount.current = placedTiles.length;
 
-    if (wasEmpty && placedTiles.length === 1 && scaleRef.current <= 1.05 && boardRef.current) {
+    if (
+      autoZoomEnabled &&
+      wasEmpty &&
+      placedTiles.length === 1 &&
+      scaleRef.current <= 1.05 &&
+      boardRef.current
+    ) {
       const tile = placedTiles[0];
       const el = boardRef.current;
       el.classList.add('auto-zooming');
@@ -55,7 +65,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
       // 4-tile radius = 9 tiles visible, scale = 15/9 ≈ 1.67
       zoomToCell(tile.row, tile.col, 15 / 9, el);
     }
-  }, [placedTiles, zoomToCell]);
+  }, [placedTiles, zoomToCell, autoZoomEnabled]);
   const lastMoveSet = new Set(lastMoveTiles.map((t) => `${t.row},${t.col}`));
   const pendingSet = new Set(placedTiles.map((t) => `${t.row},${t.col}`));
   const preview = useScorePreview();
@@ -158,7 +168,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
         {board.map((row, rowIdx) =>
           row.map((cell, colIdx) => {
             const isInWord = wordSet.has(`${rowIdx},${colIdx}`);
-            const isLastMove = lastMoveSet.has(`${rowIdx},${colIdx}`);
+            const isLastMove = lastMoveHighlightEnabled && lastMoveSet.has(`${rowIdx},${colIdx}`);
             return (
               <BoardCell
                 key={`${rowIdx}-${colIdx}`}
@@ -187,7 +197,9 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
                     : undefined
                 }
                 scorePreview={
-                  scoreBadgeCell?.row === rowIdx && scoreBadgeCell?.col === colIdx
+                  scorePreviewEnabled &&
+                  scoreBadgeCell?.row === rowIdx &&
+                  scoreBadgeCell?.col === colIdx
                     ? preview.score
                     : undefined
                 }

@@ -19,6 +19,7 @@ export function GameControls() {
   const exchangeSelection = useGameStore((s) => s.exchangeSelection);
   const setExchangeMode = useGameStore((s) => s.setExchangeMode);
   const leftHanded = useSettingsStore((s) => s.leftHanded);
+  const scorePopupEnabled = useSettingsStore((s) => s.scorePopup);
 
   // Track which popup has been dismissed via onAnimationEnd
   const [dismissedAt, setDismissedAt] = useState(0);
@@ -49,7 +50,7 @@ export function GameControls() {
 
   return (
     <div className="game-controls">
-      {showPopup && lastMove && (
+      {scorePopupEnabled && showPopup && lastMove && (
         <div
           key={moveHistory.length}
           className="score-popup"
