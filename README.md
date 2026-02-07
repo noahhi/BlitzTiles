@@ -8,8 +8,8 @@ A Scrabble-like word game with blitz-chess style move clocks. Play fast-paced wo
 - ⏱️ **Blitz Mode Timers** — Move clocks add urgency and strategic depth
 - 📱 **Mobile-First Design** — Touch-optimized drag-and-drop interface
 - 🔗 **Instant Multiplayer** — No accounts needed, just share a link
-- 🌐 **Real-Time Sync** — WebSocket-based multiplayer with auto-reconnection
-- 🎯 **Server-Authoritative** — All game logic validated server-side for fair play
+- 🌐 **Peer-to-Peer** — WebRTC multiplayer via PeerJS, no central server needed
+- 🎯 **Host-Authoritative** — All game logic validated by the host for fair play
 - 📖 **172K+ Word Dictionary** — ENABLE word list (public domain)
 
 ## Quick Start
@@ -36,9 +36,6 @@ pnpm install
 # Start the client (React + Vite)
 pnpm dev
 
-# Start the PartyKit server (in a separate terminal)
-pnpm dev:server
-
 # Run tests
 pnpm test
 
@@ -55,9 +52,8 @@ BlitzTiles is built as a monorepo using pnpm workspaces:
 
 ```
 packages/
-  shared/   — Pure game logic + types (used by both client and server)
+  shared/   — Pure game logic + types (used by client)
   client/   — React + Vite frontend
-  server/   — PartyKit multiplayer server
 ```
 
 ### Tech Stack
@@ -70,10 +66,9 @@ packages/
 - **@dnd-kit** — Touch-first drag-and-drop
 - **react-router-dom** — Client-side routing
 
-#### Backend
+#### Networking
 
-- **PartyKit** — WebSocket rooms on Cloudflare Durable Objects
-- **partysocket** — Auto-reconnecting WebSocket client
+- **PeerJS** — WebRTC P2P connections (host-to-guest direct)
 
 #### Testing
 
@@ -81,11 +76,11 @@ packages/
 
 ### Key Design Decisions
 
-1. **Server-Authoritative**: The server owns ALL game state. Clients send intents (`SUBMIT_MOVE`, `PASS`, `EXCHANGE`), server validates via shared engine, broadcasts results.
+1. **Host-Authoritative**: The host player runs the game engine and owns all game state. The guest sends intents (`SUBMIT_MOVE`, `PASS`, `EXCHANGE`), the host validates via shared engine and broadcasts results. No central server required — connections are peer-to-peer via PeerJS/WebRTC.
 
-2. **Shared Game Engine**: `packages/shared/src/gameEngine.ts` is a pure state machine. Every function takes state + action → returns new state. Used by server for real validation and by client for local hot-seat mode.
+2. **Shared Game Engine**: `packages/shared/src/gameEngine.ts` is a pure state machine. Every function takes state + action → returns new state. Used by host for real validation and by client for local hot-seat mode.
 
-3. **Timer Sync**: Server records `turnStartTimestamp`, schedules Durable Object `alarm()` for expiry. Clients show locally-ticking countdown, reconciled on every server message + periodic TIMER_SYNC pings.
+3. **Per-Turn Timer**: Each turn gets a fresh 60 seconds (configurable). The host runs `setTimeout` and is authoritative; the guest shows a local `requestAnimationFrame` countdown, reconciled on every state sync.
 
 ## Game Rules
 
@@ -126,17 +121,8 @@ React single-page application.
 **Key Hooks:**
 
 - `useGameStore.ts` — Zustand store for local and networked play
-- `useGameConnection.ts` — PartySocket connection manager
-- `useTimer.ts` — Frame-accurate countdown synchronized with server
-
-### @blitztiles/server
-
-PartyKit server implementation. The main Durable Object class handles:
-
-- `onConnect` — Assign player slots, start game when ready
-- `onMessage` — Validate moves via shared gameEngine, broadcast state
-- `onClose` — Track disconnections (clock keeps running)
-- `alarm()` — Handle timer expiry
+- `useGameConnection.ts` — PeerJS WebRTC connection manager with message buffering + REQUEST_SYNC
+- `useTimer.ts` — Frame-accurate countdown using `requestAnimationFrame`
 
 ## Development Commands
 
@@ -152,9 +138,6 @@ pnpm --filter shared test
 
 # Start client dev server
 pnpm dev
-
-# Start PartyKit dev server
-pnpm dev:server
 
 # Build all packages
 pnpm build
@@ -195,4 +178,4 @@ MIT
 ## Acknowledgments
 
 - Uses the [ENABLE word list](https://everything2.com/title/ENABLE) (public domain)
-- Built with [PartyKit](https://partykit.io/) for multiplayer infrastructure
+- Multiplayer powered by [PeerJS](https://peerjs.com/) (WebRTC)
