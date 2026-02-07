@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { Tile } from '@blitztiles/shared';
 import { useGameStore } from '../../hooks/useGameStore';
@@ -38,6 +39,11 @@ export function TileRack() {
   const phase = useGameStore((s) => s.phase);
   const tileIds = currentHand.map((t) => t.id);
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'rack-drop-zone',
+    data: { type: 'rack-zone' },
+  });
+
   if (phase !== 'playing') {
     return (
       <div className="tile-rack-container">
@@ -48,7 +54,7 @@ export function TileRack() {
 
   return (
     <div className="tile-rack-container">
-      <div className="tile-rack">
+      <div ref={setNodeRef} className={`tile-rack ${isOver ? 'rack-drag-over' : ''}`}>
         <SortableContext items={tileIds} strategy={horizontalListSortingStrategy}>
           {currentHand.map((tile) => (
             <RackTile key={tile.id} tile={tile} />

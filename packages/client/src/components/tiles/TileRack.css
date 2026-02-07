@@ -17,6 +17,11 @@
   z-index: 10;
 }
 
+.tile-rack.rack-drag-over {
+  box-shadow: 0 0 0 2px var(--accent);
+  background: rgba(187, 134, 252, 0.1);
+}
+
 .rack-tile {
   width: 42px;
   height: 42px;
@@ -31,7 +36,9 @@
   position: relative;
   user-select: none;
   -webkit-user-select: none;
-  transition: box-shadow 0.2s ease, opacity 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
   font-weight: 700;
   touch-action: none;
   will-change: transform;
