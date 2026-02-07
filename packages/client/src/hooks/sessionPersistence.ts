@@ -5,17 +5,18 @@
  * Host saves the full authoritative GameState; guest saves the filtered ClientGameState.
  */
 
-import type { GameState, ClientGameState } from '@blitztiles/shared';
+import type { GameState, ClientGameState, SpectatorGameState } from '@blitztiles/shared';
 
 const STORAGE_KEY = 'blitztiles-session';
 const MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export interface PersistedSession {
   savedAt: string;
-  role: 'host' | 'guest';
+  role: 'host' | 'guest' | 'spectator';
   roomCode: string;
   gameState: GameState | null;
   clientGameState: ClientGameState | null;
+  spectatorGameState: SpectatorGameState | null;
   stateVersion: number;
 }
 
@@ -40,7 +41,7 @@ export function loadSession(): PersistedSession | null {
       parsed === null ||
       typeof parsed.savedAt !== 'string' ||
       typeof parsed.roomCode !== 'string' ||
-      (parsed.role !== 'host' && parsed.role !== 'guest')
+      (parsed.role !== 'host' && parsed.role !== 'guest' && parsed.role !== 'spectator')
     ) {
       clearSession();
       return null;

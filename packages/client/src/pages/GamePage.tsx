@@ -39,10 +39,10 @@ function resolveTileId(rawId: string | number): string {
 
 export function GamePage() {
   const [searchParams] = useSearchParams();
-  const gameMode = searchParams.get('mode') as 'host' | 'guest' | null;
+  const gameMode = searchParams.get('mode') as 'host' | 'guest' | 'spectator' | null;
   const joinCode = searchParams.get('code') || '';
 
-  if (gameMode === 'host' || gameMode === 'guest') {
+  if (gameMode === 'host' || gameMode === 'guest' || gameMode === 'spectator') {
     return <OnlineGame role={gameMode} joinCode={joinCode} />;
   }
 
@@ -192,8 +192,15 @@ function LocalGame() {
 // Online game (host or guest via WebRTC)
 // ---------------------------------------------------------------------------
 
-function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: string }) {
+function OnlineGame({
+  role,
+  joinCode,
+}: {
+  role: 'host' | 'guest' | 'spectator';
+  joinCode: string;
+}) {
   const navigate = useNavigate();
+  const isSpectator = role === 'spectator';
 
   // Check for saved session to determine if this is a recovery
   const [recovery] = useState<PersistedSession | null>(() => {
@@ -206,7 +213,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
 
   const connection = useGameConnection(
     role,
-    role === 'guest' ? joinCode || recoveryCode : undefined,
+    role === 'guest' || role === 'spectator' ? joinCode || recoveryCode : undefined,
     recoveryCode,
   );
 
@@ -214,9 +221,13 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const dictionaryLoaded = useGameStore((s) => s.dictionaryLoaded);
   const initHostGame = useGameStore((s) => s.initHostGame);
   const initGuestGame = useGameStore((s) => s.initGuestGame);
+  const initSpectatorGame = useGameStore((s) => s.initSpectatorGame);
   const restoreHostGame = useGameStore((s) => s.restoreHostGame);
   const restoreGuestGame = useGameStore((s) => s.restoreGuestGame);
+  const restoreSpectatorGame = useGameStore((s) => s.restoreSpectatorGame);
   const setConnection = useGameStore((s) => s.setConnection);
+  const addSpectatorConnection = useGameStore((s) => s.addSpectatorConnection);
+  const removeSpectatorConnection = useGameStore((s) => s.removeSpectatorConnection);
   const handleNetworkMessage = useGameStore((s) => s.handleNetworkMessage);
   const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
@@ -225,7 +236,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
 
   useWakeLock(phase === 'playing');
-  useKeyboardControls(true);
+  useKeyboardControls(!isSpectator); // Disable keyboard controls for spectators
 
   const [initialized, setInitialized] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
@@ -260,6 +271,10 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
       restoreGuestGame(recovery.clientGameState, recovery.roomCode).then(() =>
         setInitialized(true),
       );
+    } else if (role === 'spectator' && recovery.spectatorGameState) {
+      restoreSpectatorGame(recovery.spectatorGameState, recovery.roomCode).then(() =>
+        setInitialized(true),
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -272,16 +287,46 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection.setOnMessage, handleNetworkMessage]);
 
+  // Wire spectator connection handlers (host only)
+  useEffect(() => {
+    if (
+      role === 'host' &&
+      connection.setOnSpectatorConnected &&
+      connection.setOnSpectatorDisconnected
+    ) {
+      connection.setOnSpectatorConnected((conn) => {
+        const sendFn = (msg: unknown) => {
+          if (conn.open) {
+            conn.send(msg);
+          }
+        };
+        addSpectatorConnection(sendFn);
+      });
+
+      connection.setOnSpectatorDisconnected((conn) => {
+        const sendFn = (msg: unknown) => {
+          if (conn.open) {
+            conn.send(msg);
+          }
+        };
+        removeSpectatorConnection(sendFn);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, connection.setOnSpectatorConnected, connection.setOnSpectatorDisconnected]);
+
   // When connected: set send function and init game (or sync after recovery)
   useEffect(() => {
     if (connection.status !== 'connected') return;
 
     // Always update the send function when (re)connected
-    setConnection(connection.send);
+    if (role !== 'spectator') {
+      setConnection(connection.send);
+    }
 
     if (initialized) {
       // Recovery or reconnect: request sync from host
-      if (role === 'guest') {
+      if (role === 'guest' || role === 'spectator') {
         connection.send({ type: 'REQUEST_SYNC' });
       }
       // Host: send current state to reconnecting guest
@@ -298,10 +343,15 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     const roomCode = connection.roomCode || '';
     if (role === 'host') {
       initHostGame(roomCode).then(() => setInitialized(true));
-    } else {
+    } else if (role === 'guest') {
       initGuestGame(roomCode).then(() => {
         setInitialized(true);
         connection.send({ type: 'REQUEST_SYNC' });
+      });
+    } else if (role === 'spectator') {
+      initSpectatorGame(roomCode).then(() => {
+        setInitialized(true);
+        // Spectator will receive GAME_STATE after SPECTATE_JOIN handshake
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -369,6 +419,22 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     navigate('/');
   };
 
+  // Special case: Spectator waiting for game to start
+  if (isSpectator && connection.status === 'connected' && phase === 'waiting') {
+    return (
+      <div className="game-loading">
+        <div className="online-lobby">
+          <div className="spectator-waiting">
+            <div className="loading-text">Waiting for game to start...</div>
+            <button className="btn-secondary" onClick={handleAbandon}>
+              Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!gameReady) {
     return (
       <div className="game-loading">
@@ -387,7 +453,9 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
           )}
 
           {connection.status === 'connected' && !gameReady && (
-            <div className="loading-text">Starting game...</div>
+            <div className="loading-text">
+              {isSpectator ? 'Connecting to game...' : 'Starting game...'}
+            </div>
           )}
 
           {connection.status === 'error' && (
@@ -403,7 +471,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
           {connection.status === 'disconnected' && (
             <div className="error-box">
               <div>Connection lost</div>
-              {connection.roomCode && <LobbyShare roomCode={connection.roomCode} />}
+              {connection.roomCode && !isSpectator && <LobbyShare roomCode={connection.roomCode} />}
               <button className="btn-primary" onClick={handleAbandon}>
                 Abandon Game
               </button>
@@ -411,6 +479,31 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
           )}
         </div>
       </div>
+    );
+  }
+
+  if (isSpectator) {
+    return (
+      <>
+        <LandscapeWarning />
+        <div className="game-page">
+          <TurnBanner />
+          <GameHeader isSpectator={true} />
+          <GameBoard isDragging={false} />
+          {phase === 'finished' && <GameOverModal />}
+
+          {connection.status === 'reconnecting' && (
+            <div className="reconnect-overlay">
+              <div className="reconnect-content">
+                <div className="loading-text">Reconnecting...</div>
+                <button className="btn-secondary" onClick={handleAbandon}>
+                  Back
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </>
     );
   }
 
@@ -428,13 +521,13 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
       <LandscapeWarning />
       <div className="game-page">
         <TurnBanner />
-        <GameHeader />
+        <GameHeader isSpectator={false} />
         <GameBoard isDragging={activeTileId !== null} />
         <div className="game-bottom">
           <TileRack />
           <GameControls />
         </div>
-        <GameOverModal />
+        {phase === 'finished' && <GameOverModal />}
 
         {connection.status === 'reconnecting' && (
           <div className="reconnect-overlay">
@@ -477,9 +570,19 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
 
 function LobbyShare({ roomCode }: { roomCode: string }) {
   const [copied, setCopied] = useState(false);
+  const config = useGameStore((s) => s.config);
+  const updateConfig = useGameStore((s) => s.updateConfig);
+  const [spectatorHandsVisible, setSpectatorHandsVisible] = useState(
+    config.spectatorHandsVisible ?? false,
+  );
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   const shareUrl = `${window.location.origin}${base}/game?mode=guest&code=${roomCode}`;
+
+  const handleToggleSpectatorHands = (checked: boolean) => {
+    setSpectatorHandsVisible(checked);
+    updateConfig({ spectatorHandsVisible: checked });
+  };
 
   const handleCopy = async () => {
     try {
@@ -528,6 +631,18 @@ function LobbyShare({ roomCode }: { roomCode: string }) {
         )}
       </div>
       <div className="lobby-hint">Share this link or scan the QR code</div>
+
+      <div className="spectator-settings">
+        <label className="spectator-toggle">
+          <input
+            type="checkbox"
+            checked={spectatorHandsVisible}
+            onChange={(e) => handleToggleSpectatorHands(e.target.checked)}
+          />
+          <span>Allow spectators to see player hands</span>
+        </label>
+      </div>
+
       <div className="loading-text">Waiting for opponent...</div>
     </>
   );

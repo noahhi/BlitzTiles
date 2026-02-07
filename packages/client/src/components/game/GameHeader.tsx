@@ -32,7 +32,7 @@ const TimerDisplay = React.memo(function TimerDisplay() {
   );
 });
 
-export function GameHeader() {
+export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
   const players = useGameStore((s) => s.players);
   const currentPlayerIndex = useGameStore((s) => s.currentPlayerIndex);
   const tileBagCount = useGameStore((s) => s.tileBagCount);
@@ -45,17 +45,23 @@ export function GameHeader() {
   if (players.length < 2) return null;
 
   const handleLeave = () => {
-    if (phase === 'playing') {
+    if (phase === 'playing' && !isSpectator) {
       if (!window.confirm('Leave the game? Your progress will be lost.')) return;
     }
     navigate('/');
   };
 
-  const isOnline = mode === 'host' || mode === 'guest';
-  const isMyTurn = isOnline ? currentPlayerIndex === playerIndex : true; // always "your turn" in local (shared device)
+  const isOnline = mode === 'host' || mode === 'guest' || mode === 'spectator';
+  const isMyTurn =
+    !isSpectator && (mode === 'host' || mode === 'guest')
+      ? currentPlayerIndex === playerIndex
+      : true;
 
-  // In online mode, label as "You" and "Opponent"
+  // Label players based on mode
   const getLabel = (idx: number) => {
+    if (isSpectator) {
+      return players[idx].name; // Show actual names for spectators
+    }
     if (!isOnline) return players[idx].name;
     return idx === playerIndex ? 'You' : 'Opponent';
   };
@@ -67,11 +73,11 @@ export function GameHeader() {
         &#x2190;
       </button>
       <div
-        className={`player-info ${currentPlayerIndex === 0 ? 'active' : ''} ${isOnline && playerIndex === 0 ? 'you' : ''}`}
+        className={`player-info ${currentPlayerIndex === 0 ? 'active' : ''} ${!isSpectator && isOnline && playerIndex === 0 ? 'you' : ''}`}
       >
         <div className="player-name">
           {getLabel(0)}
-          {isOnline && playerIndex === 0 && <span className="you-badge">YOU</span>}
+          {!isSpectator && isOnline && playerIndex === 0 && <span className="you-badge">YOU</span>}
         </div>
         {/* key remounts element on score change, triggering CSS bump animation */}
         <div className="player-score" key={`s0-${players[0].score}`}>
@@ -83,22 +89,24 @@ export function GameHeader() {
         <TimerDisplay />
         <div className="bag-count">{tileBagCount} tiles left</div>
         {phase === 'playing' && (
-          <div className={`turn-indicator ${isMyTurn ? 'your-turn' : ''}`}>
-            {isOnline
-              ? isMyTurn
-                ? 'Your turn'
-                : "Opponent's turn"
-              : `${players[currentPlayerIndex].name}'s turn`}
+          <div className={`turn-indicator ${!isSpectator && isMyTurn ? 'your-turn' : ''}`}>
+            {isSpectator
+              ? `${players[currentPlayerIndex].name}'s turn`
+              : isOnline
+                ? isMyTurn
+                  ? 'Your turn'
+                  : "Opponent's turn"
+                : `${players[currentPlayerIndex].name}'s turn`}
           </div>
         )}
       </div>
 
       <div
-        className={`player-info ${currentPlayerIndex === 1 ? 'active' : ''} ${isOnline && playerIndex === 1 ? 'you' : ''}`}
+        className={`player-info ${currentPlayerIndex === 1 ? 'active' : ''} ${!isSpectator && isOnline && playerIndex === 1 ? 'you' : ''}`}
       >
         <div className="player-name">
           {getLabel(1)}
-          {isOnline && playerIndex === 1 && <span className="you-badge">YOU</span>}
+          {!isSpectator && isOnline && playerIndex === 1 && <span className="you-badge">YOU</span>}
         </div>
         <div className="player-score" key={`s1-${players[1].score}`}>
           {players[1].score}

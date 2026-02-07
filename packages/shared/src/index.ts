@@ -13,6 +13,7 @@ export type {
   MoveRecord,
   ClientMessage,
   ClientGameState,
+  SpectatorGameState,
   ServerMessage,
 } from './types.js';
 

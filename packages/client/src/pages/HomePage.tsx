@@ -10,12 +10,21 @@ export function HomePage() {
   const { theme, toggleTheme } = useTheme();
   const [joinCode, setJoinCode] = useState('');
   const [showJoin, setShowJoin] = useState(false);
+  const [watchCode, setWatchCode] = useState('');
+  const [showWatch, setShowWatch] = useState(false);
   const [showResume, setShowResume] = useState(hasActiveSession);
 
   const handleJoin = () => {
     const code = joinCode.trim().toUpperCase();
     if (code.length >= 3) {
       navigate(`/game?mode=guest&code=${code}`);
+    }
+  };
+
+  const handleWatch = () => {
+    const code = watchCode.trim().toUpperCase();
+    if (code.length >= 3) {
+      navigate(`/game?mode=spectator&code=${code}`);
     }
   };
 
@@ -76,6 +85,28 @@ export function HomePage() {
               />
               <button className="btn-primary" onClick={handleJoin}>
                 Join
+              </button>
+            </div>
+          )}
+
+          {!showWatch ? (
+            <button className="btn-secondary home-btn" onClick={() => setShowWatch(true)}>
+              Watch Game
+            </button>
+          ) : (
+            <div className="join-row">
+              <input
+                type="text"
+                className="join-input"
+                placeholder="Enter code"
+                maxLength={6}
+                value={watchCode}
+                onChange={(e) => setWatchCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === 'Enter' && handleWatch()}
+                autoFocus
+              />
+              <button className="btn-primary" onClick={handleWatch}>
+                Watch
               </button>
             </div>
           )}

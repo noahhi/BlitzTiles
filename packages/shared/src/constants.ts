@@ -158,4 +158,5 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   timerDurationMs: 15 * 60 * 1000, // 15 minutes (unused in per_turn mode)
   overtimePenaltyPerMinute: 10,
   turnTimeLimitMs: DEFAULT_TURN_TIME_LIMIT_MS,
+  spectatorHandsVisible: false,
 };

@@ -57,7 +57,7 @@ const HOST_RECONNECT_TIMEOUT_MS = 60000;
 // ---------------------------------------------------------------------------
 
 export function useGameConnection(
-  role: 'host' | 'guest' | null,
+  role: 'host' | 'guest' | 'spectator' | null,
   joinCode?: string,
   recoveryCode?: string,
 ) {
@@ -69,8 +69,11 @@ export function useGameConnection(
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
+  const spectatorConnsRef = useRef<DataConnection[]>([]);
   const onMessageRef = useRef<((msg: unknown) => void) | null>(null);
   const onConnectedRef = useRef<(() => void) | null>(null);
+  const onSpectatorConnectedRef = useRef<((conn: DataConnection) => void) | null>(null);
+  const onSpectatorDisconnectedRef = useRef<((conn: DataConnection) => void) | null>(null);
   const messageQueueRef = useRef<unknown[]>([]);
   const retryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hostTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,6 +112,14 @@ export function useGameConnection(
 
   const setOnConnected = useCallback((fn: () => void) => {
     onConnectedRef.current = fn;
+  }, []);
+
+  const setOnSpectatorConnected = useCallback((fn: (conn: DataConnection) => void) => {
+    onSpectatorConnectedRef.current = fn;
+  }, []);
+
+  const setOnSpectatorDisconnected = useCallback((fn: (conn: DataConnection) => void) => {
+    onSpectatorDisconnectedRef.current = fn;
   }, []);
 
   useEffect(() => {
@@ -154,7 +165,7 @@ export function useGameConnection(
         return;
       }
 
-      if (role === 'guest') {
+      if (role === 'guest' || role === 'spectator') {
         startGuestReconnect();
       } else if (role === 'host') {
         startHostWaitForReconnect();
@@ -226,17 +237,71 @@ export function useGameConnection(
 
         peer.on('connection', (connection) => {
           if (destroyedRef.current) return;
-          // Close old connection if any
-          if (connRef.current && connRef.current !== connection) {
-            try {
-              connRef.current.close();
-            } catch {
-              // ignore
+
+          // Don't immediately decide if guest or spectator
+          // Wait for first message to determine role
+          let connectionType: 'guest' | 'spectator' | null = null;
+          let dataHandlerSetup = false;
+
+          const handleData = (data: unknown) => {
+            if (connectionType === null && !dataHandlerSetup) {
+              // First message - determine role
+              const msg = data as { type?: string };
+              if (msg && msg.type === 'SPECTATE_JOIN') {
+                connectionType = 'spectator';
+                spectatorConnsRef.current.push(connection);
+
+                // Set up spectator-specific handlers
+                connection.on('close', () => {
+                  if (destroyedRef.current) return;
+                  spectatorConnsRef.current = spectatorConnsRef.current.filter(
+                    (c) => c !== connection,
+                  );
+                  onSpectatorDisconnectedRef.current?.(connection);
+                });
+
+                // Notify store about new spectator
+                onSpectatorConnectedRef.current?.(connection);
+
+                // Forward the SPECTATE_JOIN message to the store
+                if (onMessageRef.current) {
+                  onMessageRef.current(data);
+                }
+              } else {
+                // Any other message type = guest (player)
+                connectionType = 'guest';
+
+                // Close old guest connection if any
+                if (connRef.current && connRef.current !== connection) {
+                  try {
+                    connRef.current.close();
+                  } catch {
+                    // ignore
+                  }
+                }
+                clearHostTimeout();
+                connRef.current = connection;
+
+                // Set up guest handlers
+                setupDataChannel(connection);
+              }
+              dataHandlerSetup = true;
             }
-          }
-          clearHostTimeout();
-          connRef.current = connection;
-          setupDataChannel(connection);
+
+            // Forward all messages to message handler (including the first one)
+            if (onMessageRef.current) {
+              onMessageRef.current(data);
+            } else {
+              messageQueueRef.current.push(data);
+            }
+          };
+
+          connection.on('data', handleData);
+
+          connection.on('error', (err) => {
+            if (destroyedRef.current) return;
+            console.warn('[BlitzTiles] Connection error:', err.message);
+          });
         });
 
         peer.on('error', (err) => {
@@ -283,6 +348,37 @@ export function useGameConnection(
           setState({ status: 'error', roomCode: codeToUse, error: err.message });
         }
       });
+    } else if (role === 'spectator') {
+      const codeToUse = joinCode || recoveryCode || '';
+      const hostPeerId = roomCodeToPeerId(codeToUse);
+
+      setState({ status: 'connecting', roomCode: codeToUse, error: null });
+
+      const peer = new Peer();
+      peerRef.current = peer;
+
+      peer.on('open', () => {
+        if (destroyedRef.current) return;
+        const connection = peer.connect(hostPeerId, { reliable: true });
+        connRef.current = connection;
+
+        setupDataChannel(connection);
+
+        connection.on('open', () => {
+          if (destroyedRef.current) return;
+          // Send spectator handshake
+          connection.send({ type: 'SPECTATE_JOIN' });
+        });
+      });
+
+      peer.on('error', (err) => {
+        if (destroyedRef.current) return;
+        // During reconnect retries, peer-level errors are expected (host not found yet)
+        // Only surface as fatal if we're not already reconnecting
+        if (retryTimerRef.current === null) {
+          setState({ status: 'error', roomCode: codeToUse, error: err.message });
+        }
+      });
     }
 
     return () => {
@@ -290,6 +386,15 @@ export function useGameConnection(
       clearRetryTimer();
       clearHostTimeout();
       connRef.current?.close();
+      // Close all spectator connections
+      spectatorConnsRef.current.forEach((conn) => {
+        try {
+          conn.close();
+        } catch {
+          // ignore
+        }
+      });
+      spectatorConnsRef.current = [];
       peerRef.current?.destroy();
       connRef.current = null;
       peerRef.current = null;
@@ -297,5 +402,12 @@ export function useGameConnection(
     };
   }, [role, joinCode, recoveryCode, clearRetryTimer, clearHostTimeout]);
 
-  return { ...state, send, setOnMessage, setOnConnected };
+  return {
+    ...state,
+    send,
+    setOnMessage,
+    setOnConnected,
+    setOnSpectatorConnected,
+    setOnSpectatorDisconnected,
+  };
 }

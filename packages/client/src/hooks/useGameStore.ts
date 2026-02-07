@@ -18,6 +18,7 @@ import type {
   GameConfig,
   GameState,
   ClientGameState,
+  SpectatorGameState,
 } from '@blitztiles/shared';
 import {
   createGame,
@@ -35,7 +36,7 @@ import { saveSession, clearSession } from './sessionPersistence';
 // Types
 // ---------------------------------------------------------------------------
 
-export type GameMode = 'local' | 'host' | 'guest';
+export type GameMode = 'local' | 'host' | 'guest' | 'spectator';
 
 export interface GameStore {
   // Game state
@@ -79,13 +80,20 @@ export interface GameStore {
   _gameState: GameState | null;
   _dictionary: Trie | null;
   _sendFn: ((msg: unknown) => void) | null;
+  _spectatorSendFns: ((msg: unknown) => void)[];
+  config: GameConfig;
 
   // Actions
   initLocalGame: (config?: GameConfig) => Promise<void>;
   initHostGame: (roomCode: string, config?: GameConfig) => Promise<void>;
   initGuestGame: (roomCode: string) => Promise<void>;
+  initSpectatorGame: (roomCode: string) => Promise<void>;
   restoreHostGame: (savedState: GameState, roomCode: string) => Promise<void>;
   restoreGuestGame: (savedClientState: ClientGameState, roomCode: string) => Promise<void>;
+  restoreSpectatorGame: (spectatorState: SpectatorGameState, roomCode: string) => Promise<void>;
+  addSpectatorConnection: (sendFn: (msg: unknown) => void) => void;
+  removeSpectatorConnection: (sendFn: (msg: unknown) => void) => void;
+  updateConfig: (configUpdates: Partial<GameConfig>) => void;
   setConnection: (send: (msg: unknown) => void) => void;
   handleNetworkMessage: (msg: unknown) => void;
   placeTile: (tileId: string, row: number, col: number, designatedLetter?: string) => void;
@@ -239,6 +247,70 @@ export function filterStateForPlayer(state: GameState, forPlayer: number): Clien
   };
 }
 
+/** Filter full GameState into a SpectatorGameState. */
+export function filterStateForSpectator(state: GameState, config: GameConfig): SpectatorGameState {
+  const includeHands = config.spectatorHandsVisible ?? false;
+
+  return {
+    roomId: state.roomId,
+    phase: state.phase,
+    config: state.config,
+    board: state.board,
+    players: [
+      {
+        name: state.players[0].name,
+        score: state.players[0].score,
+        timeRemainingMs: state.players[0].timeRemainingMs,
+        handSize: state.players[0].hand.length,
+        connected: state.players[0].connected,
+        ...(includeHands && { hand: state.players[0].hand }),
+      },
+      {
+        name: state.players[1].name,
+        score: state.players[1].score,
+        timeRemainingMs: state.players[1].timeRemainingMs,
+        handSize: state.players[1].hand.length,
+        connected: state.players[1].connected,
+        ...(includeHands && { hand: state.players[1].hand }),
+      },
+    ],
+    currentPlayerIndex: state.currentPlayerIndex,
+    tileBagCount: state.tileBag.length,
+    consecutivePasses: state.consecutivePasses,
+    turnStartTimestamp: state.turnStartTimestamp,
+    winnerIndex: state.winnerIndex,
+    endReason: state.endReason,
+    moveHistory: state.moveHistory,
+    stateVersion: state.stateVersion,
+    lastMoveTiles: state.lastMoveTiles,
+  };
+}
+
+/** Sync store from SpectatorGameState (spectator mode). */
+function syncFromSpectatorGameState(spectatorState: SpectatorGameState): Partial<GameStore> {
+  return {
+    phase: spectatorState.phase,
+    board: spectatorState.board,
+    currentPlayerIndex: spectatorState.currentPlayerIndex,
+    players: spectatorState.players.map((p) => ({
+      name: p.name,
+      score: p.score,
+      handSize: p.handSize,
+      timeRemainingMs: p.timeRemainingMs,
+    })),
+    currentHand: [], // Spectators never have a hand
+    tileBagCount: spectatorState.tileBagCount,
+    consecutivePasses: spectatorState.consecutivePasses,
+    winnerIndex: spectatorState.winnerIndex,
+    endReason: spectatorState.endReason,
+    moveHistory: spectatorState.moveHistory,
+    turnTimeLimitMs: spectatorState.config.turnTimeLimitMs ?? 0,
+    turnStartTimestamp: spectatorState.turnStartTimestamp,
+    lastMoveTiles: spectatorState.lastMoveTiles,
+    playerIndex: -1, // Spectator is not a player
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Default state (spread in init functions to guarantee clean slate)
 // ---------------------------------------------------------------------------
@@ -275,6 +347,14 @@ const INITIAL_STATE = {
   _gameState: null as GameState | null,
   _dictionary: null as Trie | null,
   _sendFn: null as ((msg: unknown) => void) | null,
+  _spectatorSendFns: [] as ((msg: unknown) => void)[],
+  config: {
+    timerMode: 'per_turn',
+    timerDurationMs: 0,
+    overtimePenaltyPerMinute: 0,
+    turnTimeLimitMs: 60000,
+    spectatorHandsVisible: false,
+  } as GameConfig,
 };
 
 // ---------------------------------------------------------------------------
@@ -301,7 +381,7 @@ function scheduleTurnTimeout(get: () => GameStore, set: (partial: Partial<GameSt
   if (!_gameState) return;
   if (_gameState.config.timerMode !== 'per_turn') return;
   if (_gameState.phase !== 'playing') return;
-  if (mode === 'guest') return;
+  if (mode === 'guest' || mode === 'spectator') return;
 
   const elapsed = Date.now() - Date.parse(_gameState.turnStartTimestamp);
   const remaining = Math.max(0, _gameState.config.turnTimeLimitMs - elapsed);
@@ -321,9 +401,12 @@ function scheduleTurnTimeout(get: () => GameStore, set: (partial: Partial<GameSt
       lastMoveError: null,
     });
 
-    // Host: broadcast to guest
-    if (currentMode === 'host' && _sendFn) {
-      _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+    // Host: broadcast to guest and spectators
+    if (currentMode === 'host') {
+      if (_sendFn) {
+        _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+      }
+      broadcastToSpectators(get, result.state);
     }
 
     // Schedule the next turn's timeout
@@ -358,11 +441,26 @@ function persistGameSession(get: () => GameStore) {
         roomCode: _roomCode,
         gameState: _gameState,
         clientGameState: null,
+        spectatorGameState: null,
         stateVersion: _gameState.stateVersion,
       });
     }
   }
   // Guest persistence is handled in handleNetworkMessage when receiving GAME_STATE
+}
+
+// ---------------------------------------------------------------------------
+// Spectator broadcasting helper
+// ---------------------------------------------------------------------------
+
+function broadcastToSpectators(get: () => GameStore, state: GameState) {
+  const { _spectatorSendFns, config } = get();
+  if (_spectatorSendFns.length > 0) {
+    const spectatorState = filterStateForSpectator(state, config);
+    _spectatorSendFns.forEach((fn) => {
+      fn({ type: 'GAME_STATE', state: spectatorState });
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -462,6 +560,68 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Guest will REQUEST_SYNC after reconnecting to get fresh state
   },
 
+  initSpectatorGame: async (roomCode) => {
+    clearTurnTimeout();
+    set({
+      ...INITIAL_STATE,
+      mode: 'spectator',
+      playerIndex: -1,
+      _sendFn: get()._sendFn,
+      _roomCode: roomCode,
+    });
+    const dictionary = await getDictionary();
+    set({
+      dictionaryLoaded: true,
+      _dictionary: dictionary,
+    });
+  },
+
+  restoreSpectatorGame: async (spectatorState, roomCode) => {
+    clearTurnTimeout();
+    const dictionary = await getDictionary();
+
+    set({
+      ...INITIAL_STATE,
+      ...syncFromSpectatorGameState(spectatorState),
+      mode: 'spectator',
+      playerIndex: -1,
+      dictionaryLoaded: true,
+      _dictionary: dictionary,
+      _sendFn: get()._sendFn,
+      _roomCode: roomCode,
+    });
+  },
+
+  addSpectatorConnection: (sendFn) => {
+    const current = get()._spectatorSendFns;
+    set({ _spectatorSendFns: [...current, sendFn] });
+
+    // Immediately send current game state to new spectator
+    const { _gameState, config } = get();
+    if (_gameState) {
+      sendFn({ type: 'GAME_STATE', state: filterStateForSpectator(_gameState, config) });
+    }
+  },
+
+  removeSpectatorConnection: (sendFn) => {
+    const current = get()._spectatorSendFns;
+    set({ _spectatorSendFns: current.filter((fn) => fn !== sendFn) });
+  },
+
+  updateConfig: (configUpdates) => {
+    const { _gameState } = get();
+    if (_gameState) {
+      const newConfig = { ..._gameState.config, ...configUpdates };
+      set({
+        config: newConfig,
+        _gameState: {
+          ..._gameState,
+          config: newConfig,
+        },
+      });
+    }
+  },
+
   setConnection: (send) => {
     set({ _sendFn: send });
   },
@@ -492,6 +652,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return;
       }
 
+      // SPECTATE_JOIN should not reach here - it's handled in useGameConnection
+      // But we'll silently ignore it if it somehow does
+      if (msg.type === 'SPECTATE_JOIN') {
+        return;
+      }
+
       // Phase guard: reject game actions unless the game is in progress
       if (_gameState.phase !== 'playing') {
         _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Game is not in progress' });
@@ -518,6 +684,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               lastMoveError: null,
             });
             _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+            broadcastToSpectators(get, result.state);
             scheduleTurnTimeout(get, set);
             persistGameSession(get);
           } else {
@@ -537,6 +704,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             lastMoveError: null,
           });
           _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+          broadcastToSpectators(get, result.state);
           scheduleTurnTimeout(get, set);
           persistGameSession(get);
           break;
@@ -559,6 +727,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               lastMoveError: null,
             });
             _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+            broadcastToSpectators(get, result.state);
             scheduleTurnTimeout(get, set);
             persistGameSession(get);
           } else {
@@ -573,6 +742,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             placedTiles: [],
           });
           _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result, 1) });
+          broadcastToSpectators(get, result);
           clearSession();
           break;
         }
@@ -604,6 +774,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 roomCode: _roomCode,
                 gameState: null,
                 clientGameState: clientState,
+                spectatorGameState: null,
                 stateVersion: clientState.stateVersion,
               });
             }
@@ -616,6 +787,47 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return;
           }
           set({ lastMoveError: msg.reason });
+          break;
+        }
+      }
+    } else if (mode === 'spectator') {
+      // Spectators only receive GAME_STATE updates
+      switch (msg.type) {
+        case 'GAME_STATE': {
+          if (typeof msg.state !== 'object' || msg.state === null) {
+            console.warn('[BlitzTiles] Invalid GAME_STATE message: missing state', msg);
+            return;
+          }
+          const spectatorState = msg.state as SpectatorGameState;
+          set({
+            ...syncFromSpectatorGameState(spectatorState),
+            placedTiles: [],
+            selectedTileId: null,
+            lastMoveError: null,
+          });
+
+          // Persist for session recovery
+          const { _roomCode } = get();
+          if (_roomCode) {
+            if (spectatorState.phase === 'finished') {
+              clearSession();
+            } else {
+              saveSession({
+                savedAt: new Date().toISOString(),
+                role: 'spectator',
+                roomCode: _roomCode,
+                gameState: null,
+                clientGameState: null,
+                spectatorGameState: spectatorState,
+                stateVersion: spectatorState.stateVersion,
+              });
+            }
+          }
+          break;
+        }
+        case 'ERROR': {
+          if (typeof msg.message !== 'string') return;
+          set({ lastMoveError: msg.message });
           break;
         }
       }
@@ -703,9 +915,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastMoveError: null,
     });
 
-    // Host: broadcast to guest
-    if (mode === 'host' && _sendFn) {
-      _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+    // Host: broadcast to guest and spectators
+    if (mode === 'host') {
+      if (_sendFn) {
+        _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+      }
+      broadcastToSpectators(get, result.state);
     }
     scheduleTurnTimeout(get, set);
     if (mode === 'host') persistGameSession(get);
@@ -732,8 +947,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastMoveError: null,
     });
 
-    if (mode === 'host' && _sendFn) {
-      _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+    if (mode === 'host') {
+      if (_sendFn) {
+        _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+      }
+      broadcastToSpectators(get, result.state);
     }
     scheduleTurnTimeout(get, set);
     if (mode === 'host') persistGameSession(get);
@@ -767,8 +985,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       exchangeSelection: new Set(),
     });
 
-    if (mode === 'host' && _sendFn) {
-      _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+    if (mode === 'host') {
+      if (_sendFn) {
+        _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+      }
+      broadcastToSpectators(get, result.state);
     }
     scheduleTurnTimeout(get, set);
     if (mode === 'host') persistGameSession(get);
@@ -794,8 +1015,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       selectedTileId: null,
     });
 
-    if (mode === 'host' && _sendFn) {
-      _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result, 1) });
+    if (mode === 'host') {
+      if (_sendFn) {
+        _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result, 1) });
+      }
+      broadcastToSpectators(get, result);
     }
     if (mode !== 'local') clearSession();
   },
