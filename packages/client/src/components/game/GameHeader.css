@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px 8px 36px;
+  padding: 8px 36px 8px 36px;
   background: var(--bg-secondary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
@@ -213,4 +213,78 @@
 .turn-timer.critical .timer-ring {
   width: 42px;
   height: 42px;
+}
+
+/* ─── Settings gear + modal ──────────────────────────────────────── */
+
+.settings-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  z-index: 1;
+}
+
+.settings-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.settings-modal {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.settings-modal-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.settings-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.settings-modal-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
 }

@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../hooks/useGameStore';
 import { useTimer } from '../../hooks/useTimer';
+import { SettingsPanel } from '../settings/SettingsPanel';
 import './GameHeader.css';
 
 export function GameHeader() {
@@ -12,6 +14,7 @@ export function GameHeader() {
   const playerIndex = useGameStore((s) => s.playerIndex);
   const timer = useTimer();
   const navigate = useNavigate();
+  const [showSettings, setShowSettings] = useState(false);
 
   if (players.length < 2) return null;
 
@@ -89,6 +92,22 @@ export function GameHeader() {
           {players[1].score}
         </div>
       </div>
+      <button className="settings-btn" onClick={() => setShowSettings(true)} title="Settings">
+        &#x2699;
+      </button>
+      {showSettings && (
+        <div className="settings-modal-backdrop" onClick={() => setShowSettings(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <h3>Settings</h3>
+              <button className="settings-modal-close" onClick={() => setShowSettings(false)}>
+                &#x2715;
+              </button>
+            </div>
+            <SettingsPanel />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
