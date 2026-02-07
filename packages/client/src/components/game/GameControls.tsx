@@ -65,21 +65,19 @@ export function GameControls() {
         </div>
       )}
 
+      {exchangeMode && <div className="exchange-prompt">Tap tiles to exchange</div>}
       {exchangeMode ? (
-        <div className="exchange-mode">
-          <div className="exchange-prompt">Tap tiles to exchange</div>
-          <div className="exchange-actions">
-            <button className="btn-secondary" onClick={handleExchangeToggle}>
-              Cancel
-            </button>
-            <button
-              className="btn-primary"
-              onClick={handleExchangeConfirm}
-              disabled={exchangeSelection.size === 0}
-            >
-              Exchange {exchangeSelection.size} tile{exchangeSelection.size !== 1 ? 's' : ''}
-            </button>
-          </div>
+        <div className="exchange-actions">
+          <button className="btn-secondary" onClick={handleExchangeToggle}>
+            Cancel
+          </button>
+          <button
+            className="btn-primary"
+            onClick={handleExchangeConfirm}
+            disabled={exchangeSelection.size === 0}
+          >
+            Exchange {exchangeSelection.size} tile{exchangeSelection.size !== 1 ? 's' : ''}
+          </button>
         </div>
       ) : (
         <div className={`control-buttons${leftHanded ? ' left-handed' : ''}`}>

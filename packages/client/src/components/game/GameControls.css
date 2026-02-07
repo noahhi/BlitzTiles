@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
 }
 
 .control-buttons {
@@ -93,17 +94,17 @@
 }
 
 /* Exchange mode */
-.exchange-mode {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-}
-
 .exchange-prompt {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  text-align: center;
   font-size: 0.85rem;
   color: var(--text-muted);
   font-weight: 600;
+  padding-bottom: 6px;
+  pointer-events: none;
 }
 
 .exchange-tiles {
@@ -146,5 +147,6 @@
 
 .exchange-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  justify-content: center;
 }
