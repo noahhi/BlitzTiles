@@ -15,6 +15,7 @@ interface BoardCellProps {
   isSelected: boolean;
   isLastMove: boolean;
   pendingEdges?: PendingEdges;
+  scorePreview?: number | null;
   onClick: () => void;
 }
 
@@ -31,6 +32,7 @@ export function BoardCell({
   isSelected,
   isLastMove,
   pendingEdges,
+  scorePreview,
   onClick,
 }: BoardCellProps) {
   const tile = pendingTile || cell.tile;
@@ -101,6 +103,7 @@ export function BoardCell({
           {isCenter && !cell.bonus && <span className="center-star">★</span>}
         </>
       )}
+      {scorePreview != null && <span className="score-badge">+{scorePreview}</span>}
     </div>
   );
 }

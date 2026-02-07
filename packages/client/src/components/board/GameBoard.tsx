@@ -30,6 +30,20 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
     col: number;
   } | null>(null);
 
+  // Compute which cell gets the score badge (last tile of the word)
+  const scoreBadgeCell =
+    preview.score !== null && placedTiles.length > 0
+      ? (() => {
+          const rows = placedTiles.map((t) => t.row);
+          const cols = placedTiles.map((t) => t.col);
+          const isHorizontal = new Set(rows).size === 1;
+          return {
+            row: isHorizontal ? rows[0] : Math.max(...rows),
+            col: isHorizontal ? Math.max(...cols) : cols[0],
+          };
+        })()
+      : null;
+
   if (!board || board.length === 0) return null;
 
   const getPendingTile = (row: number, col: number): PlacedTile | undefined => {
@@ -85,32 +99,16 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
                       }
                     : undefined
                 }
+                scorePreview={
+                  scoreBadgeCell?.row === rowIdx && scoreBadgeCell?.col === colIdx
+                    ? preview.score
+                    : undefined
+                }
                 onClick={() => handleCellClick(rowIdx, colIdx)}
               />
             );
           }),
         )}
-        {preview.score !== null &&
-          placedTiles.length > 0 &&
-          (() => {
-            // Position badge on the last tile of the word
-            const rows = placedTiles.map((t) => t.row);
-            const cols = placedTiles.map((t) => t.col);
-            const isHorizontal = new Set(rows).size === 1;
-            const endRow = isHorizontal ? rows[0] : Math.max(...rows);
-            const endCol = isHorizontal ? Math.max(...cols) : cols[0];
-            return (
-              <div
-                className="score-badge"
-                style={{
-                  gridRow: endRow + 1,
-                  gridColumn: endCol + 1,
-                }}
-              >
-                <span>+{preview.score}</span>
-              </div>
-            );
-          })()}
       </div>
       {isZoomed && (
         <button className="zoom-reset-btn" onClick={resetZoom}>
