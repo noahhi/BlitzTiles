@@ -175,6 +175,7 @@ function syncFromGameState(state: GameState, viewAsPlayer: number): Partial<Game
     turnTimeLimitMs: state.config.turnTimeLimitMs ?? 0,
     turnStartTimestamp: state.turnStartTimestamp,
     lastMoveTiles: state.lastMoveTiles,
+    config: state.config,
     _gameState: state,
   };
 }
@@ -212,6 +213,7 @@ function syncFromClientGameState(clientState: ClientGameState): Partial<GameStor
     turnTimeLimitMs: clientState.config.turnTimeLimitMs ?? 0,
     turnStartTimestamp: clientState.turnStartTimestamp,
     lastMoveTiles: clientState.lastMoveTiles,
+    config: clientState.config,
     playerIndex: myIndex,
   };
 }
@@ -307,6 +309,7 @@ function syncFromSpectatorGameState(spectatorState: SpectatorGameState): Partial
     turnTimeLimitMs: spectatorState.config.turnTimeLimitMs ?? 0,
     turnStartTimestamp: spectatorState.turnStartTimestamp,
     lastMoveTiles: spectatorState.lastMoveTiles,
+    config: spectatorState.config,
     playerIndex: -1, // Spectator is not a player
   };
 }

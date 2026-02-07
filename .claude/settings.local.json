@@ -9,7 +9,8 @@
       "Bash(npm --version:*)",
       "Bash(git checkout:*)",
       "Bash(git rebase:*)",
-      "Bash(GIT_EDITOR=true git rebase:*)"
+      "Bash(GIT_EDITOR=true git rebase:*)",
+      "Bash(gh pr view:*)"
     ]
   }
 }
