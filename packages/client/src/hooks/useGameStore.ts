@@ -9,6 +9,7 @@
 
 import { arrayMove } from '@dnd-kit/sortable';
 import { create } from 'zustand';
+import { z } from 'zod';
 import type {
   Board,
   GamePhase,
@@ -101,6 +102,22 @@ export interface GameStore {
   setExchangeMode: (on: boolean) => void;
   toggleExchangeTile: (tileId: string) => void;
 }
+
+// ---------------------------------------------------------------------------
+// Network Message Validation
+// ---------------------------------------------------------------------------
+
+const PlacedTileSchema = z.object({
+  id: z.string(),
+  row: z.number().int().min(0).max(14),
+  col: z.number().int().min(0).max(14),
+  letter: z.string().max(1),
+  value: z.number().int().min(0).max(15),
+  isBlank: z.boolean(),
+  designatedLetter: z.string().max(1),
+});
+
+const TileIdsSchema = z.array(z.string());
 
 // ---------------------------------------------------------------------------
 // Dictionary loading
@@ -492,11 +509,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       switch (msg.type) {
         case 'SUBMIT_MOVE': {
-          if (!Array.isArray(msg.tiles)) {
-            _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Invalid move data' });
+          // Validate tile data structure with Zod
+          const parseResult = PlacedTileSchema.array().safeParse(msg.tiles);
+          if (!parseResult.success) {
+            _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Invalid move data structure' });
             return;
           }
-          const tiles = msg.tiles as PlacedTile[];
+          const tiles = parseResult.data;
           // Only allow if it's guest's turn (player 1)
           if (_gameState.currentPlayerIndex !== 1) {
             _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Not your turn' });
@@ -534,15 +553,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
           break;
         }
         case 'EXCHANGE': {
-          if (!Array.isArray(msg.tileIds)) {
-            _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Invalid exchange data' });
+          // Validate tileIds array structure with Zod
+          const parseResult = TileIdsSchema.safeParse(msg.tileIds);
+          if (!parseResult.success) {
+            _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Invalid exchange data structure' });
             return;
           }
           if (_gameState.currentPlayerIndex !== 1) {
             _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Not your turn' });
             return;
           }
-          const tileIds = msg.tileIds as string[];
+          const tileIds = parseResult.data;
           const result = exchangePlayerTiles(_gameState, 1, tileIds);
           if (result.success) {
             set({
