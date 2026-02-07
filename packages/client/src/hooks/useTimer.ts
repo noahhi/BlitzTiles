@@ -34,6 +34,7 @@ export function useTimer(): TimerState {
 
   const [remainingMs, setRemainingMs] = useState(turnTimeLimitMs);
   const rafRef = useRef<number>(0);
+  const vibratedRef = useRef(false);
 
   useEffect(() => {
     if (!isRunning) {
@@ -46,6 +47,15 @@ export function useTimer(): TimerState {
       const elapsed = Date.now() - Date.parse(turnStartTimestamp);
       const remaining = Math.max(0, turnTimeLimitMs - elapsed);
       setRemainingMs(remaining);
+
+      // Vibrate once when entering critical zone
+      if (remaining <= 5000 && !vibratedRef.current) {
+        vibratedRef.current = true;
+        if (typeof navigator.vibrate === 'function') {
+          navigator.vibrate([100, 50, 100]); // short double buzz
+        }
+      }
+
       if (remaining > 0) {
         rafRef.current = requestAnimationFrame(tick);
       }
@@ -58,6 +68,11 @@ export function useTimer(): TimerState {
       cancelAnimationFrame(rafRef.current);
     };
   }, [isRunning, turnStartTimestamp, turnTimeLimitMs]);
+
+  // Reset vibrated flag when turn changes
+  useEffect(() => {
+    vibratedRef.current = false;
+  }, [turnStartTimestamp]);
 
   const progress = turnTimeLimitMs > 0 ? Math.min(1, 1 - remainingMs / turnTimeLimitMs) : 0;
 

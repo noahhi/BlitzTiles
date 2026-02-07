@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../hooks/useGameStore';
 import { useTimer } from '../../hooks/useTimer';
 import './GameHeader.css';
@@ -10,6 +11,24 @@ export function GameHeader() {
   const mode = useGameStore((s) => s.mode);
   const playerIndex = useGameStore((s) => s.playerIndex);
   const timer = useTimer();
+
+  const [bumpedPlayer, setBumpedPlayer] = useState<number | null>(null);
+  const prevScoresRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    if (players.length < 2) return;
+    const scores = [players[0].score, players[1].score];
+    for (let i = 0; i < 2; i++) {
+      if (prevScoresRef.current[i] !== undefined && scores[i] > prevScoresRef.current[i]) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setBumpedPlayer(i);
+        const t = setTimeout(() => setBumpedPlayer(null), 300);
+        prevScoresRef.current = scores;
+        return () => clearTimeout(t);
+      }
+    }
+    prevScoresRef.current = scores;
+  }, [players]);
 
   if (players.length < 2) return null;
 
@@ -24,6 +43,7 @@ export function GameHeader() {
 
   return (
     <div className="game-header">
+      {timer.urgency === 'critical' && timer.isRunning && <div className="critical-screen-flash" />}
       <div
         className={`player-info ${currentPlayerIndex === 0 ? 'active' : ''} ${isOnline && playerIndex === 0 ? 'you' : ''}`}
       >
@@ -31,7 +51,9 @@ export function GameHeader() {
           {getLabel(0)}
           {isOnline && playerIndex === 0 && <span className="you-badge">YOU</span>}
         </div>
-        <div className="player-score">{players[0].score}</div>
+        <div className={`player-score ${bumpedPlayer === 0 ? 'bumped' : ''}`}>
+          {players[0].score}
+        </div>
       </div>
 
       <div className="game-info-center">
@@ -69,7 +91,9 @@ export function GameHeader() {
           {getLabel(1)}
           {isOnline && playerIndex === 1 && <span className="you-badge">YOU</span>}
         </div>
-        <div className="player-score">{players[1].score}</div>
+        <div className={`player-score ${bumpedPlayer === 1 ? 'bumped' : ''}`}>
+          {players[1].score}
+        </div>
       </div>
     </div>
   );
