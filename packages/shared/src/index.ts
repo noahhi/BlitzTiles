@@ -7,6 +7,7 @@ export type {
   Board,
   PlayerState,
   TimerMode,
+  GameVariant,
   GameConfig,
   GamePhase,
   GameState,
@@ -27,6 +28,7 @@ export {
   BONUS_MAP,
   DEFAULT_GAME_CONFIG,
   DEFAULT_TURN_TIME_LIMIT_MS,
+  DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
 } from './constants.js';
 
 // Tile bag
@@ -63,3 +65,18 @@ export type {
   ExchangeError,
   ExchangeTilesResult,
 } from './gameEngine.js';
+
+// Racing engine
+export {
+  createRacingGame,
+  submitRacingMove,
+  handleRacingRoundTimeout,
+  checkRacingEndConditions,
+} from './racingEngine.js';
+
+export type {
+  RacingMoveResult,
+  RacingMoveError,
+  SubmitRacingMoveResult,
+  RacingTimeoutResult,
+} from './racingEngine.js';

@@ -174,6 +174,8 @@ describe('createGame', () => {
         timerDurationMs: 0,
         overtimePenaltyPerMinute: 0,
         turnTimeLimitMs: 0,
+        gameVariant: 'classic',
+        racingRoundTimeLimitMs: 30_000,
       },
       TEST_SEED,
     );
@@ -192,6 +194,8 @@ describe('createGame', () => {
         timerDurationMs: 10 * 60 * 1000,
         overtimePenaltyPerMinute: 0,
         turnTimeLimitMs: 0,
+        gameVariant: 'classic',
+        racingRoundTimeLimitMs: 30_000,
       },
       TEST_SEED,
     );
@@ -427,6 +431,8 @@ describe('handleTimerExpiry', () => {
         timerDurationMs: 600000,
         overtimePenaltyPerMinute: 0,
         turnTimeLimitMs: 0,
+        gameVariant: 'classic',
+        racingRoundTimeLimitMs: 30_000,
       },
       TEST_SEED,
     );
@@ -465,6 +471,8 @@ describe('updatePlayerTime', () => {
         timerDurationMs: 600000,
         overtimePenaltyPerMinute: 0,
         turnTimeLimitMs: 0,
+        gameVariant: 'classic',
+        racingRoundTimeLimitMs: 30_000,
       },
       TEST_SEED,
     );
@@ -484,6 +492,8 @@ describe('updatePlayerTime', () => {
         timerDurationMs: 600000,
         overtimePenaltyPerMinute: 0,
         turnTimeLimitMs: 0,
+        gameVariant: 'classic',
+        racingRoundTimeLimitMs: 30_000,
       },
       TEST_SEED,
     );
@@ -552,6 +562,8 @@ describe('handleTurnTimeout (per-turn timer)', () => {
         timerDurationMs: 0,
         overtimePenaltyPerMinute: 0,
         turnTimeLimitMs: 60000,
+        gameVariant: 'classic',
+        racingRoundTimeLimitMs: 30_000,
       },
       TEST_SEED,
     );
