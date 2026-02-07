@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { Trie, loadDictionary } from './words';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { Trie, loadDictionary, loadCompressedDictionary } from './words';
 
 describe('Trie', () => {
   it('insert and has: basic word lookup works', () => {
@@ -96,5 +98,45 @@ describe('loadDictionary', () => {
     expect(trie.has('CAT')).toBe(true);
     expect(trie.has('FISH')).toBe(true);
     expect(trie.size).toBe(3);
+  });
+});
+
+describe("loadCompressedDictionary", () => {
+  const dictPath = resolve(__dirname, "../data/enable.txt.gz");
+
+  it("loads the ENABLE dictionary from gzip", async () => {
+    const gzipped = readFileSync(dictPath);
+    const trie = await loadCompressedDictionary(new Uint8Array(gzipped));
+    expect(trie.size).toBe(172837);
+  });
+
+  it("contains common English words", async () => {
+    const gzipped = readFileSync(dictPath);
+    const trie = await loadCompressedDictionary(new Uint8Array(gzipped));
+    expect(trie.has("HELLO")).toBe(true);
+    expect(trie.has("WORLD")).toBe(true);
+    expect(trie.has("SCRABBLE")).toBe(true);
+    expect(trie.has("ZYZZYVA")).toBe(true);
+  });
+
+  it("contains manually-added short words", async () => {
+    const gzipped = readFileSync(dictPath);
+    const trie = await loadCompressedDictionary(new Uint8Array(gzipped));
+    // Critical Q-without-U words
+    expect(trie.has("QI")).toBe(true);
+    expect(trie.has("QIS")).toBe(true);
+    // Other important 2-letter additions
+    expect(trie.has("ZA")).toBe(true);
+    expect(trie.has("DA")).toBe(true);
+    expect(trie.has("GI")).toBe(true);
+    expect(trie.has("OK")).toBe(true);
+  });
+
+  it("rejects nonsense strings", async () => {
+    const gzipped = readFileSync(dictPath);
+    const trie = await loadCompressedDictionary(new Uint8Array(gzipped));
+    expect(trie.has("ZZZZZ")).toBe(false);
+    expect(trie.has("ASDFGH")).toBe(false);
+    expect(trie.has("XYZPDQ")).toBe(false);
   });
 });
