@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useGameStore } from '../../hooks/useGameStore';
 import './TurnBanner.css';
 
@@ -8,9 +8,12 @@ export function TurnBanner() {
   const playerIndex = useGameStore((s) => s.playerIndex);
   const players = useGameStore((s) => s.players);
   const phase = useGameStore((s) => s.phase);
+  const moveHistory = useGameStore((s) => s.moveHistory);
 
-  const [visible, setVisible] = useState(false);
-  const prevPlayerRef = useRef(currentPlayerIndex);
+  // Track which banner has been dismissed via onAnimationEnd
+  const [dismissedAt, setDismissedAt] = useState(0);
+  // Capture mount-time move count so we skip pre-existing moves
+  const [mountMoveCount] = useState(() => moveHistory.length);
 
   const text = useMemo(() => {
     if (players.length < 2) return '';
@@ -22,24 +25,21 @@ export function TurnBanner() {
     return `${players[currentPlayerIndex].name}'s Turn`;
   }, [currentPlayerIndex, mode, playerIndex, players]);
 
-  useEffect(() => {
-    if (phase !== 'playing') return;
-    if (players.length < 2) return;
+  // Derive visibility from moveHistory — no effect needed
+  const showBanner =
+    phase === 'playing' &&
+    players.length >= 2 &&
+    moveHistory.length > mountMoveCount &&
+    moveHistory.length > dismissedAt;
 
-    // Only show when turn actually changes (not on initial render)
-    if (prevPlayerRef.current === currentPlayerIndex) return;
-    prevPlayerRef.current = currentPlayerIndex;
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setVisible(true);
-    const timer = setTimeout(() => setVisible(false), 1500);
-    return () => clearTimeout(timer);
-  }, [currentPlayerIndex, phase, players]);
-
-  if (!visible) return null;
+  if (!showBanner) return null;
 
   return (
-    <div className="turn-banner">
+    <div
+      className="turn-banner"
+      key={moveHistory.length}
+      onAnimationEnd={() => setDismissedAt(moveHistory.length)}
+    >
       <div className="turn-banner-text">{text}</div>
     </div>
   );

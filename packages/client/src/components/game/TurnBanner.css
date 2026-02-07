@@ -8,9 +8,7 @@
   justify-content: center;
   padding: 12px;
   pointer-events: none;
-  animation:
-    banner-in 0.3s ease-out,
-    banner-out 0.3s ease-in 1.2s forwards;
+  animation: banner-lifecycle 1.5s ease-out forwards;
 }
 
 .turn-banner-text {
@@ -24,22 +22,19 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-@keyframes banner-in {
-  from {
+@keyframes banner-lifecycle {
+  0% {
     opacity: 0;
     transform: translateY(-20px);
   }
-  to {
+  20% {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes banner-out {
-  from {
+  80% {
     opacity: 1;
   }
-  to {
+  100% {
     opacity: 0;
   }
 }
