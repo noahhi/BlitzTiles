@@ -107,11 +107,7 @@ export function GameControls() {
           <button className="btn-secondary" onClick={passTurnAction}>
             Pass
           </button>
-          <button
-            className="btn-primary"
-            onClick={submitMoveAction}
-            disabled={!hasPlacedTiles}
-          >
+          <button className="btn-primary" onClick={submitMoveAction} disabled={!hasPlacedTiles}>
             Submit
           </button>
         </div>

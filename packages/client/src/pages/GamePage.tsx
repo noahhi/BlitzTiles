@@ -7,7 +7,6 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { GameBoard } from '../components/board/GameBoard';
@@ -58,6 +57,7 @@ function LocalGame() {
     if (phase === 'waiting') {
       initLocalGame();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -73,7 +73,7 @@ function LocalGame() {
     if (activeType === 'rack-tile' && overType === 'rack-tile') {
       reorderHand(active.id as string, over.id as string);
     } else if (over.id.toString().startsWith('cell-')) {
-      const [_, row, col] = over.id.toString().split('-');
+      const [, row, col] = over.id.toString().split('-');
       placeTile(active.id as string, parseInt(row), parseInt(col));
     }
   };
@@ -107,14 +107,10 @@ function LocalGame() {
 
 function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: string }) {
   const navigate = useNavigate();
-  const connection = useGameConnection(
-    role,
-    role === 'guest' ? joinCode : undefined,
-  );
+  const connection = useGameConnection(role, role === 'guest' ? joinCode : undefined);
 
   const phase = useGameStore((s) => s.phase);
   const dictionaryLoaded = useGameStore((s) => s.dictionaryLoaded);
-  const mode = useGameStore((s) => s.mode);
   const initHostGame = useGameStore((s) => s.initHostGame);
   const initGuestGame = useGameStore((s) => s.initGuestGame);
   const setConnection = useGameStore((s) => s.setConnection);
@@ -141,6 +137,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     connection.setOnMessage((msg: unknown) => {
       handleNetworkMessage(msg);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection.setOnMessage, handleNetworkMessage]);
 
   // When connected: set send function and init game
@@ -158,14 +155,12 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
         });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection.status, initialized]);
 
   // Show lobby/waiting screen until game is ready
   const gameReady =
-    connection.status === 'connected' &&
-    initialized &&
-    dictionaryLoaded &&
-    phase === 'playing';
+    connection.status === 'connected' && initialized && dictionaryLoaded && phase === 'playing';
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -180,7 +175,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     if (activeType === 'rack-tile' && overType === 'rack-tile') {
       reorderHand(active.id as string, over.id as string);
     } else if (over.id.toString().startsWith('cell-')) {
-      const [_, row, col] = over.id.toString().split('-');
+      const [, row, col] = over.id.toString().split('-');
       placeTile(active.id as string, parseInt(row), parseInt(col));
     }
   };
@@ -189,9 +184,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     return (
       <div className="game-loading">
         <div className="online-lobby">
-          {connection.status === 'connecting' && (
-            <div className="loading-text">Connecting...</div>
-          )}
+          {connection.status === 'connecting' && <div className="loading-text">Connecting...</div>}
 
           {connection.status === 'waiting' && (
             <>

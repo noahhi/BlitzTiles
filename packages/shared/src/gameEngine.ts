@@ -75,7 +75,7 @@ export function createGame(
   config: GameConfig = DEFAULT_GAME_CONFIG,
   seed?: number,
 ): GameState {
-  const { tiles: bag, seed: usedSeed } = createTileBag(seed);
+  const { tiles: bag } = createTileBag(seed);
 
   // Draw hands for both players
   const draw0 = drawTiles(bag, HAND_SIZE);
@@ -219,10 +219,7 @@ export function submitMove(
   };
 
   // Build updated player states
-  const newPlayers: [PlayerState, PlayerState] = [
-    { ...state.players[0] },
-    { ...state.players[1] },
-  ];
+  const newPlayers: [PlayerState, PlayerState] = [{ ...state.players[0] }, { ...state.players[1] }];
   newPlayers[playerIndex] = {
     ...newPlayers[playerIndex],
     hand: newHand,
@@ -262,10 +259,7 @@ export function submitMove(
  *
  * If both players pass consecutively, the game ends.
  */
-export function passTurn(
-  state: GameState,
-  playerIndex: number,
-): PassResult {
+export function passTurn(state: GameState, playerIndex: number): PassResult {
   if (state.phase !== 'playing') {
     return { state, gameOver: false };
   }
@@ -363,10 +357,7 @@ export function exchangeTiles(
     timestamp: new Date().toISOString(),
   };
 
-  const newPlayers: [PlayerState, PlayerState] = [
-    { ...state.players[0] },
-    { ...state.players[1] },
-  ];
+  const newPlayers: [PlayerState, PlayerState] = [{ ...state.players[0] }, { ...state.players[1] }];
   newPlayers[playerIndex] = {
     ...newPlayers[playerIndex],
     hand: newHand,
@@ -393,10 +384,7 @@ export function exchangeTiles(
 /**
  * A player resigns. The other player wins immediately.
  */
-export function resignGame(
-  state: GameState,
-  playerIndex: number,
-): GameState {
+export function resignGame(state: GameState, playerIndex: number): GameState {
   if (state.phase !== 'playing') {
     return state;
   }
@@ -433,10 +421,7 @@ export function handleTurnTimeout(state: GameState): PassResult {
  * Handle timer expiry for a player.
  * In sudden_death mode, the player who ran out of time loses.
  */
-export function handleTimerExpiry(
-  state: GameState,
-  playerIndex: number,
-): GameState {
+export function handleTimerExpiry(state: GameState, playerIndex: number): GameState {
   if (state.phase !== 'playing') {
     return state;
   }
@@ -478,10 +463,7 @@ export function updatePlayerTime(
   playerIndex: number,
   elapsedMs: number,
 ): GameState {
-  const newPlayers: [PlayerState, PlayerState] = [
-    { ...state.players[0] },
-    { ...state.players[1] },
-  ];
+  const newPlayers: [PlayerState, PlayerState] = [{ ...state.players[0] }, { ...state.players[1] }];
 
   newPlayers[playerIndex] = {
     ...newPlayers[playerIndex],
@@ -515,9 +497,7 @@ export function checkEndConditions(state: GameState): GameState {
   for (let i = 0; i < 2; i++) {
     if (state.players[i].hand.length === 0 && state.tileBag.length === 0) {
       const opponentIndex = i === 0 ? 1 : 0;
-      const bonus = getEndGameBonus(
-        state.players[opponentIndex].hand.map((t) => t.value),
-      );
+      const bonus = getEndGameBonus(state.players[opponentIndex].hand.map((t) => t.value));
 
       const newPlayers: [PlayerState, PlayerState] = [
         { ...state.players[0] },

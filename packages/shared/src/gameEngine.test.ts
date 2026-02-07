@@ -21,16 +21,88 @@ import { HAND_SIZE } from './constants.js';
 function createTestDictionary(): Trie {
   const trie = new Trie();
   const words = [
-    'CAT', 'CAR', 'CARD', 'CARE', 'CART', 'AT', 'TO', 'TON', 'TAN',
-    'DOG', 'DO', 'GO', 'GOD', 'DON', 'NOD', 'TAR', 'RAT', 'ART',
-    'STAR', 'RATS', 'ARTS', 'TARS', 'HI', 'HIT', 'IT', 'THE',
-    'HE', 'SHE', 'HER', 'HERE', 'THERE', 'AN', 'AND', 'HAND',
-    'BAND', 'LAND', 'SAND', 'STAND', 'ON', 'ONE', 'TONE', 'DONE',
-    'BONE', 'CONE', 'ZONE', 'OH', 'OR', 'ORE', 'MORE', 'CORE',
-    'BORE', 'SORE', 'TORE', 'WORE', 'WORD', 'WORDS', 'SWORD',
-    'AB', 'BA', 'AD', 'DA', 'AH', 'HA', 'AM', 'MA', 'AS', 'IF',
-    'IN', 'IS', 'NO', 'OF', 'SO', 'UP', 'WE', 'BE', 'BY', 'ME',
-    'MY', 'OX', 'PI', 'RE', 'US',
+    'CAT',
+    'CAR',
+    'CARD',
+    'CARE',
+    'CART',
+    'AT',
+    'TO',
+    'TON',
+    'TAN',
+    'DOG',
+    'DO',
+    'GO',
+    'GOD',
+    'DON',
+    'NOD',
+    'TAR',
+    'RAT',
+    'ART',
+    'STAR',
+    'RATS',
+    'ARTS',
+    'TARS',
+    'HI',
+    'HIT',
+    'IT',
+    'THE',
+    'HE',
+    'SHE',
+    'HER',
+    'HERE',
+    'THERE',
+    'AN',
+    'AND',
+    'HAND',
+    'BAND',
+    'LAND',
+    'SAND',
+    'STAND',
+    'ON',
+    'ONE',
+    'TONE',
+    'DONE',
+    'BONE',
+    'CONE',
+    'ZONE',
+    'OH',
+    'OR',
+    'ORE',
+    'MORE',
+    'CORE',
+    'BORE',
+    'SORE',
+    'TORE',
+    'WORE',
+    'WORD',
+    'WORDS',
+    'SWORD',
+    'AB',
+    'BA',
+    'AD',
+    'DA',
+    'AH',
+    'HA',
+    'AM',
+    'MA',
+    'AS',
+    'IF',
+    'IN',
+    'IS',
+    'NO',
+    'OF',
+    'SO',
+    'UP',
+    'WE',
+    'BE',
+    'BY',
+    'ME',
+    'MY',
+    'OX',
+    'PI',
+    'RE',
+    'US',
   ];
   for (const w of words) {
     trie.insert(w);
@@ -93,24 +165,36 @@ describe('createGame', () => {
   });
 
   it('applies untimed config correctly', () => {
-    const state = createGame('room-1', 'p0', 'p1', {
-      timerMode: 'untimed',
-      timerDurationMs: 0,
-      overtimePenaltyPerMinute: 0,
-      turnTimeLimitMs: 0,
-    }, TEST_SEED);
+    const state = createGame(
+      'room-1',
+      'p0',
+      'p1',
+      {
+        timerMode: 'untimed',
+        timerDurationMs: 0,
+        overtimePenaltyPerMinute: 0,
+        turnTimeLimitMs: 0,
+      },
+      TEST_SEED,
+    );
 
     expect(state.players[0].timeRemainingMs).toBe(Infinity);
     expect(state.players[1].timeRemainingMs).toBe(Infinity);
   });
 
   it('applies timed config correctly', () => {
-    const state = createGame('room-1', 'p0', 'p1', {
-      timerMode: 'sudden_death',
-      timerDurationMs: 10 * 60 * 1000,
-      overtimePenaltyPerMinute: 0,
-      turnTimeLimitMs: 0,
-    }, TEST_SEED);
+    const state = createGame(
+      'room-1',
+      'p0',
+      'p1',
+      {
+        timerMode: 'sudden_death',
+        timerDurationMs: 10 * 60 * 1000,
+        overtimePenaltyPerMinute: 0,
+        turnTimeLimitMs: 0,
+      },
+      TEST_SEED,
+    );
 
     expect(state.players[0].timeRemainingMs).toBe(600000);
     expect(state.players[1].timeRemainingMs).toBe(600000);
@@ -136,7 +220,7 @@ describe('submitMove', () => {
     }
   });
 
-  it('rejects move when it is not the player\'s turn', () => {
+  it("rejects move when it is not the player's turn", () => {
     const tiles: PlacedTile[] = [];
     const result = submitMove(state, 1, tiles, dict);
     expect(result.success).toBe(false);
@@ -334,12 +418,18 @@ describe('handleTimerExpiry', () => {
   let state: GameState;
 
   beforeEach(() => {
-    state = createGame('room-1', 'p0', 'p1', {
-      timerMode: 'sudden_death',
-      timerDurationMs: 600000,
-      overtimePenaltyPerMinute: 0,
-      turnTimeLimitMs: 0,
-    }, TEST_SEED);
+    state = createGame(
+      'room-1',
+      'p0',
+      'p1',
+      {
+        timerMode: 'sudden_death',
+        timerDurationMs: 600000,
+        overtimePenaltyPerMinute: 0,
+        turnTimeLimitMs: 0,
+      },
+      TEST_SEED,
+    );
   });
 
   it('sudden death: player 0 expires, player 1 wins', () => {
@@ -366,12 +456,18 @@ describe('handleTimerExpiry', () => {
 
 describe('updatePlayerTime', () => {
   it('deducts elapsed time', () => {
-    const state = createGame('room-1', 'p0', 'p1', {
-      timerMode: 'sudden_death',
-      timerDurationMs: 600000,
-      overtimePenaltyPerMinute: 0,
-      turnTimeLimitMs: 0,
-    }, TEST_SEED);
+    const state = createGame(
+      'room-1',
+      'p0',
+      'p1',
+      {
+        timerMode: 'sudden_death',
+        timerDurationMs: 600000,
+        overtimePenaltyPerMinute: 0,
+        turnTimeLimitMs: 0,
+      },
+      TEST_SEED,
+    );
 
     const result = updatePlayerTime(state, 0, 30000);
     expect(result.players[0].timeRemainingMs).toBe(570000);
@@ -379,12 +475,18 @@ describe('updatePlayerTime', () => {
   });
 
   it('does not go below zero', () => {
-    const state = createGame('room-1', 'p0', 'p1', {
-      timerMode: 'sudden_death',
-      timerDurationMs: 600000,
-      overtimePenaltyPerMinute: 0,
-      turnTimeLimitMs: 0,
-    }, TEST_SEED);
+    const state = createGame(
+      'room-1',
+      'p0',
+      'p1',
+      {
+        timerMode: 'sudden_death',
+        timerDurationMs: 600000,
+        overtimePenaltyPerMinute: 0,
+        turnTimeLimitMs: 0,
+      },
+      TEST_SEED,
+    );
 
     const result = updatePlayerTime(state, 0, 999999);
     expect(result.players[0].timeRemainingMs).toBe(0);
@@ -415,10 +517,7 @@ describe('checkEndConditions', () => {
 
     const modifiedState: GameState = {
       ...state,
-      players: [
-        { ...state.players[0], hand: [] },
-        { ...state.players[1] },
-      ],
+      players: [{ ...state.players[0], hand: [] }, { ...state.players[1] }],
       // tileBag still has tiles
     };
 
@@ -444,12 +543,18 @@ describe('handleTurnTimeout (per-turn timer)', () => {
   let state: GameState;
 
   beforeEach(() => {
-    state = createGame('room-1', 'p0', 'p1', {
-      timerMode: 'per_turn',
-      timerDurationMs: 0,
-      overtimePenaltyPerMinute: 0,
-      turnTimeLimitMs: 60000,
-    }, TEST_SEED);
+    state = createGame(
+      'room-1',
+      'p0',
+      'p1',
+      {
+        timerMode: 'per_turn',
+        timerDurationMs: 0,
+        overtimePenaltyPerMinute: 0,
+        turnTimeLimitMs: 60000,
+      },
+      TEST_SEED,
+    );
   });
 
   it('auto-passes the current player', () => {

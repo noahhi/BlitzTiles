@@ -9,12 +9,15 @@ import { BONUS_MAP, BOARD_SIZE } from './constants.js';
 
 function createEmptyBoard(): Board {
   return Array.from({ length: BOARD_SIZE }, (_, row) =>
-    Array.from({ length: BOARD_SIZE }, (_, col): BoardCell => ({
-      row,
-      col,
-      tile: null,
-      bonus: BONUS_MAP[row][col],
-    })),
+    Array.from(
+      { length: BOARD_SIZE },
+      (_, col): BoardCell => ({
+        row,
+        col,
+        tile: null,
+        bonus: BONUS_MAP[row][col],
+      }),
+    ),
   );
 }
 
@@ -57,7 +60,14 @@ describe('scoreTurn', () => {
     ];
 
     const formedWords = [
-      { word: 'CAT', cells: [{ row: 4, col: 5 }, { row: 4, col: 6 }, { row: 4, col: 7 }] },
+      {
+        word: 'CAT',
+        cells: [
+          { row: 4, col: 5 },
+          { row: 4, col: 6 },
+          { row: 4, col: 7 },
+        ],
+      },
     ];
 
     // 3 + 1 + 1 = 5
@@ -78,7 +88,14 @@ describe('scoreTurn', () => {
     ];
 
     const formedWords = [
-      { word: 'HAT', cells: [{ row: 0, col: 3 }, { row: 0, col: 4 }, { row: 0, col: 5 }] },
+      {
+        word: 'HAT',
+        cells: [
+          { row: 0, col: 3 },
+          { row: 0, col: 4 },
+          { row: 0, col: 5 },
+        ],
+      },
     ];
 
     // H: 4×2 = 8, A: 1, T: 1 → 10
@@ -99,7 +116,14 @@ describe('scoreTurn', () => {
     ];
 
     const formedWords = [
-      { word: 'AFT', cells: [{ row: 1, col: 4 }, { row: 1, col: 5 }, { row: 1, col: 6 }] },
+      {
+        word: 'AFT',
+        cells: [
+          { row: 1, col: 4 },
+          { row: 1, col: 5 },
+          { row: 1, col: 6 },
+        ],
+      },
     ];
 
     // A: 1, F: 4×3 = 12, T: 1 → 14
@@ -120,7 +144,14 @@ describe('scoreTurn', () => {
     ];
 
     const formedWords = [
-      { word: 'CAT', cells: [{ row: 7, col: 6 }, { row: 7, col: 7 }, { row: 7, col: 8 }] },
+      {
+        word: 'CAT',
+        cells: [
+          { row: 7, col: 6 },
+          { row: 7, col: 7 },
+          { row: 7, col: 8 },
+        ],
+      },
     ];
 
     // (3 + 1 + 1) × 2 = 10
@@ -140,7 +171,13 @@ describe('scoreTurn', () => {
     ];
 
     const formedWords = [
-      { word: 'GO', cells: [{ row: 0, col: 0 }, { row: 0, col: 1 }] },
+      {
+        word: 'GO',
+        cells: [
+          { row: 0, col: 0 },
+          { row: 0, col: 1 },
+        ],
+      },
     ];
 
     // (2 + 1) × 3 = 9
@@ -213,7 +250,13 @@ describe('scoreTurn', () => {
     ];
 
     const formedWords = [
-      { word: 'AT', cells: [{ row: 0, col: 3 }, { row: 0, col: 4 }] },
+      {
+        word: 'AT',
+        cells: [
+          { row: 0, col: 3 },
+          { row: 0, col: 4 },
+        ],
+      },
     ];
 
     // A(blank): 0×2 = 0, T: 1 → 1
@@ -264,13 +307,16 @@ describe('scoreTurn', () => {
 
   it('does not add bingo bonus when fewer than 7 tiles are placed', () => {
     const board = createEmptyBoard();
-    const placedTiles: PlacedTile[] = [
-      makeTile('A', 1, 4, 5),
-      makeTile('T', 1, 4, 6),
-    ];
+    const placedTiles: PlacedTile[] = [makeTile('A', 1, 4, 5), makeTile('T', 1, 4, 6)];
 
     const formedWords = [
-      { word: 'AT', cells: [{ row: 4, col: 5 }, { row: 4, col: 6 }] },
+      {
+        word: 'AT',
+        cells: [
+          { row: 4, col: 5 },
+          { row: 4, col: 6 },
+        ],
+      },
     ];
 
     // 1 + 1 = 2, no bingo
@@ -295,19 +341,34 @@ describe('scoreTurn', () => {
     // Newly placed tiles this turn: just the C at (3,5) — no bonus at (3,5).
     // Actually (3,5) is null in BONUS_MAP? Let me check: row 3 DL positions
     // are (3,0), (3,7), (3,14). (3,5) has no bonus. Good.
-    const placedTiles: PlacedTile[] = [
-      makeTile('C', 3, 3, 5),
-      makeTile('O', 1, 3, 6),
-    ];
+    const placedTiles: PlacedTile[] = [makeTile('C', 3, 3, 5), makeTile('O', 1, 3, 6)];
 
     // Two formed words:
     // 1) "CO" horizontally at row 3, cols 5-6 (both newly placed)
     // 2) "CA" vertically at col 5, rows 3-4 (C is new, A is existing)
     // 3) "OT" vertically at col 6, rows 3-4 (O is new, T is existing)
     const formedWords = [
-      { word: 'CO', cells: [{ row: 3, col: 5 }, { row: 3, col: 6 }] },
-      { word: 'CA', cells: [{ row: 3, col: 5 }, { row: 4, col: 5 }] },
-      { word: 'OT', cells: [{ row: 3, col: 6 }, { row: 4, col: 6 }] },
+      {
+        word: 'CO',
+        cells: [
+          { row: 3, col: 5 },
+          { row: 3, col: 6 },
+        ],
+      },
+      {
+        word: 'CA',
+        cells: [
+          { row: 3, col: 5 },
+          { row: 4, col: 5 },
+        ],
+      },
+      {
+        word: 'OT',
+        cells: [
+          { row: 3, col: 6 },
+          { row: 4, col: 6 },
+        ],
+      },
     ];
 
     // CO: 3 + 1 = 4
@@ -330,12 +391,16 @@ describe('scoreTurn', () => {
     board[0][3].tile = makeTile('H', 4, 0, 3);
 
     // New tile "I" at (0,4) — no bonus.
-    const placedTiles: PlacedTile[] = [
-      makeTile('I', 1, 0, 4),
-    ];
+    const placedTiles: PlacedTile[] = [makeTile('I', 1, 0, 4)];
 
     const formedWords = [
-      { word: 'HI', cells: [{ row: 0, col: 3 }, { row: 0, col: 4 }] },
+      {
+        word: 'HI',
+        cells: [
+          { row: 0, col: 3 },
+          { row: 0, col: 4 },
+        ],
+      },
     ];
 
     // H is existing on DL — no bonus reapplied: value = 4
@@ -351,12 +416,16 @@ describe('scoreTurn', () => {
     board[7][7].tile = makeTile('A', 1, 7, 7);
 
     // New tile "T" at (7,8) — no bonus.
-    const placedTiles: PlacedTile[] = [
-      makeTile('T', 1, 7, 8),
-    ];
+    const placedTiles: PlacedTile[] = [makeTile('T', 1, 7, 8)];
 
     const formedWords = [
-      { word: 'AT', cells: [{ row: 7, col: 7 }, { row: 7, col: 8 }] },
+      {
+        word: 'AT',
+        cells: [
+          { row: 7, col: 7 },
+          { row: 7, col: 8 },
+        ],
+      },
     ];
 
     // A: 1 (DW not reapplied), T: 1

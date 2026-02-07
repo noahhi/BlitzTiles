@@ -24,9 +24,7 @@ export function GameOverModal() {
           <div className="game-over-result">{winnerName} wins!</div>
         )}
 
-        {endReason && (
-          <div className="game-over-reason">{endReason}</div>
-        )}
+        {endReason && <div className="game-over-reason">{endReason}</div>}
 
         <div className="final-scores">
           {players.map((p, i) => (

@@ -21,18 +21,12 @@ export function HomePage() {
         <p className="home-subtitle">Word game with a clock</p>
 
         <div className="home-actions">
-          <button
-            className="btn-primary home-btn"
-            onClick={() => navigate('/game?mode=host')}
-          >
+          <button className="btn-primary home-btn" onClick={() => navigate('/game?mode=host')}>
             Play Online
           </button>
 
           {!showJoin ? (
-            <button
-              className="btn-secondary home-btn"
-              onClick={() => setShowJoin(true)}
-            >
+            <button className="btn-secondary home-btn" onClick={() => setShowJoin(true)}>
               Join Game
             </button>
           ) : (
@@ -53,10 +47,7 @@ export function HomePage() {
             </div>
           )}
 
-          <button
-            className="btn-secondary home-btn"
-            onClick={() => navigate('/game')}
-          >
+          <button className="btn-secondary home-btn" onClick={() => navigate('/game')}>
             Local (Hot Seat)
           </button>
         </div>

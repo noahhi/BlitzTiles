@@ -19,7 +19,6 @@ import type {
   GameState,
   ClientGameState,
 } from '@blitztiles/shared';
-import { arrayMove } from '@dnd-kit/sortable';
 import {
   createGame,
   submitMove,
@@ -28,7 +27,6 @@ import {
   resignGame,
   handleTurnTimeout,
   Trie,
-  loadDictionary,
 } from '@blitztiles/shared';
 
 // ---------------------------------------------------------------------------
@@ -92,7 +90,6 @@ export interface GameStore {
   reorderHand: (activeId: string, overId: string) => void;
   clearError: () => void;
 }
-
 
 // ---------------------------------------------------------------------------
 // Dictionary loading
@@ -261,10 +258,7 @@ function clearTurnTimeout() {
  * Schedule an auto-pass when the current turn's time runs out.
  * Only runs in 'local' or 'host' mode (guest relies on host).
  */
-function scheduleTurnTimeout(
-  get: () => GameStore,
-  set: (partial: Partial<GameStore>) => void,
-) {
+function scheduleTurnTimeout(get: () => GameStore, set: (partial: Partial<GameStore>) => void) {
   clearTurnTimeout();
 
   const { _gameState, mode } = get();

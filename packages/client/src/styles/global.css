@@ -1,34 +1,34 @@
 :root {
   --bg: #121212;
-  --bg-secondary: #1E1E1E;
-  --bg-card: #2C2C2C;
-  --text: #E0E0E0;
-  --text-muted: #A0A0A0;
-  --accent: #BB86FC;
+  --bg-secondary: #1e1e1e;
+  --bg-card: #2c2c2c;
+  --text: #e0e0e0;
+  --text-muted: #a0a0a0;
+  --accent: #bb86fc;
   --accent-hover: #9e66de;
 
   /* Tiles */
-  --tile-bg: #E0E0E0;
+  --tile-bg: #e0e0e0;
   --tile-text: #121212;
-  --tile-border: #BDBDBD;
-  --tile-selected: #BB86FC;
+  --tile-border: #bdbdbd;
+  --tile-selected: #bb86fc;
 
   /* Board */
-  --board-bg: #1E1E1E;
+  --board-bg: #1e1e1e;
   --board-border: #121212;
-  --cell-bg: #2C2C2C;
-  --cell-border: #1E1E1E;
+  --cell-bg: #2c2c2c;
+  --cell-border: #1e1e1e;
 
   /* Bonus Squares */
-  --dl: #3A536A; /* Muted Blue */
-  --tl: #6A3A53; /* Muted Purple */
-  --dw: #6A6A3A; /* Muted Yellow/Green */
-  --tw: #6A3A3A; /* Muted Red */
-  --center: #4A4A4A;
+  --dl: #3a536a; /* Muted Blue */
+  --tl: #6a3a53; /* Muted Purple */
+  --dw: #6a6a3a; /* Muted Yellow/Green */
+  --tw: #6a3a3a; /* Muted Red */
+  --center: #4a4a4a;
 
-  --success: #03DAC6;
-  --warning: #FFAB00;
-  --danger: #CF6679;
+  --success: #03dac6;
+  --warning: #ffab00;
+  --danger: #cf6679;
   --font: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
@@ -38,7 +38,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   font-family: var(--font);
   background: var(--bg);

@@ -1,19 +1,12 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { PlayerTile } from '@blitztiles/shared';
+import type { Tile } from '@blitztiles/shared';
 import { useGameStore } from '../../hooks/useGameStore';
 import './TileRack.css';
 
-function RackTile({ tile }: { tile: PlayerTile }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+function RackTile({ tile }: { tile: Tile }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tile.id,
     data: { tile, type: 'rack-tile' },
   });

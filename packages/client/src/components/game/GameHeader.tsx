@@ -14,9 +14,7 @@ export function GameHeader() {
   if (players.length < 2) return null;
 
   const isOnline = mode === 'host' || mode === 'guest';
-  const isMyTurn = isOnline
-    ? currentPlayerIndex === playerIndex
-    : true; // always "your turn" in local (shared device)
+  const isMyTurn = isOnline ? currentPlayerIndex === playerIndex : true; // always "your turn" in local (shared device)
 
   // In online mode, label as "You" and "Opponent"
   const getLabel = (idx: number) => {
@@ -26,7 +24,9 @@ export function GameHeader() {
 
   return (
     <div className="game-header">
-      <div className={`player-info ${currentPlayerIndex === 0 ? 'active' : ''} ${isOnline && playerIndex === 0 ? 'you' : ''}`}>
+      <div
+        className={`player-info ${currentPlayerIndex === 0 ? 'active' : ''} ${isOnline && playerIndex === 0 ? 'you' : ''}`}
+      >
         <div className="player-name">
           {getLabel(0)}
           {isOnline && playerIndex === 0 && <span className="you-badge">YOU</span>}
@@ -41,7 +41,9 @@ export function GameHeader() {
               <circle className="timer-ring-bg" cx="20" cy="20" r="17" />
               <circle
                 className="timer-ring-progress"
-                cx="20" cy="20" r="17"
+                cx="20"
+                cy="20"
+                r="17"
                 strokeDasharray={`${(1 - timer.progress) * 106.8} 106.8`}
               />
             </svg>
@@ -52,14 +54,17 @@ export function GameHeader() {
         {phase === 'playing' && (
           <div className={`turn-indicator ${isMyTurn ? 'your-turn' : ''}`}>
             {isOnline
-              ? (isMyTurn ? 'Your turn' : "Opponent's turn")
-              : `${players[currentPlayerIndex].name}'s turn`
-            }
+              ? isMyTurn
+                ? 'Your turn'
+                : "Opponent's turn"
+              : `${players[currentPlayerIndex].name}'s turn`}
           </div>
         )}
       </div>
 
-      <div className={`player-info ${currentPlayerIndex === 1 ? 'active' : ''} ${isOnline && playerIndex === 1 ? 'you' : ''}`}>
+      <div
+        className={`player-info ${currentPlayerIndex === 1 ? 'active' : ''} ${isOnline && playerIndex === 1 ? 'you' : ''}`}
+      >
         <div className="player-name">
           {getLabel(1)}
           {isOnline && playerIndex === 1 && <span className="you-badge">YOU</span>}

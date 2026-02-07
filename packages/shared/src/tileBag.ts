@@ -84,10 +84,7 @@ export function createTileBag(seed?: number): { tiles: Tile[]; seed: number } {
  *
  * @returns The drawn tiles and the remaining bag.
  */
-export function drawTiles(
-  bag: Tile[],
-  count: number,
-): { drawn: Tile[]; remaining: Tile[] } {
+export function drawTiles(bag: Tile[], count: number): { drawn: Tile[]; remaining: Tile[] } {
   const actual = Math.min(count, bag.length);
   return {
     drawn: bag.slice(0, actual),

@@ -142,7 +142,13 @@ export interface ClientGameState {
   config: GameConfig;
   board: Board;
   you: PlayerState;
-  opponent: { name: string; score: number; timeRemainingMs: number; handSize: number; connected: boolean };
+  opponent: {
+    name: string;
+    score: number;
+    timeRemainingMs: number;
+    handSize: number;
+    connected: boolean;
+  };
   currentPlayerIndex: number;
   yourPlayerIndex: number;
   tileBagCount: number;

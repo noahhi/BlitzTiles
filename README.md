@@ -16,7 +16,7 @@ A Scrabble-like word game with blitz-chess style move clocks. Play fast-paced wo
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+ 
+- [Node.js](https://nodejs.org/) 18+
 - [pnpm](https://pnpm.io/) 8+
 
 ### Installation
@@ -63,6 +63,7 @@ packages/
 ### Tech Stack
 
 #### Frontend
+
 - **React 18** + **TypeScript** — UI framework
 - **Vite** — Build tool and dev server
 - **Zustand** — Minimal state management (~1KB)
@@ -70,10 +71,12 @@ packages/
 - **react-router-dom** — Client-side routing
 
 #### Backend
+
 - **PartyKit** — WebSocket rooms on Cloudflare Durable Objects
 - **partysocket** — Auto-reconnecting WebSocket client
 
 #### Testing
+
 - **Vitest** — Fast unit testing
 
 ### Key Design Decisions
@@ -102,6 +105,7 @@ packages/
 Pure TypeScript library with zero dependencies. All exports from `packages/shared/src/index.ts`.
 
 **Key Modules:**
+
 - `types.ts` — All TypeScript types and interfaces
 - `constants.ts` — Tile distribution, bonus square map, game defaults
 - `tileBag.ts` — Tile bag operations with deterministic PRNG
@@ -115,10 +119,12 @@ Pure TypeScript library with zero dependencies. All exports from `packages/share
 React single-page application.
 
 **Key Components:**
+
 - `HomePage` — Create or join games
 - `GamePage` — Main gameplay interface
 
 **Key Hooks:**
+
 - `useGameStore.ts` — Zustand store for local and networked play
 - `useGameConnection.ts` — PartySocket connection manager
 - `useTimer.ts` — Frame-accurate countdown synchronized with server
@@ -126,6 +132,7 @@ React single-page application.
 ### @blitztiles/server
 
 PartyKit server implementation. The main Durable Object class handles:
+
 - `onConnect` — Assign player slots, start game when ready
 - `onMessage` — Validate moves via shared gameEngine, broadcast state
 - `onClose` — Track disconnections (clock keeps running)

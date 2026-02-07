@@ -115,9 +115,7 @@ export function isValidPlacement(
   }
 
   // Sort tiles by position along their axis
-  const sorted = [...tiles].sort((a, b) =>
-    allSameRow ? a.col - b.col : a.row - b.row,
-  );
+  const sorted = [...tiles].sort((a, b) => (allSameRow ? a.col - b.col : a.row - b.row));
 
   // Check contiguity: every cell between first and last must be occupied
   // (either by a new tile or an existing board tile)
@@ -150,9 +148,7 @@ export function isValidPlacement(
 
   if (boardIsEmpty) {
     // First move must cover center square
-    const coversCenter = tiles.some(
-      (t) => t.row === CENTER && t.col === CENTER,
-    );
+    const coversCenter = tiles.some((t) => t.row === CENTER && t.col === CENTER);
     if (!coversCenter) {
       return { valid: false, reason: 'First move must cover center square' };
     }
@@ -271,10 +267,7 @@ export function getFormedWords(
     // Walk backward to find the beginning of the word
     let r = startRow;
     let c = startCol;
-    while (
-      isInBounds(r - dr, c - dc) &&
-      getLetterAt(board, r - dr, c - dc, tiles) !== null
-    ) {
+    while (isInBounds(r - dr, c - dc) && getLetterAt(board, r - dr, c - dc, tiles) !== null) {
       r -= dr;
       c -= dc;
     }
@@ -297,7 +290,6 @@ export function getFormedWords(
 
   // Determine direction of placement
   const allSameRow = tiles.every((t) => t.row === tiles[0].row);
-  const allSameCol = tiles.every((t) => t.col === tiles[0].col);
 
   if (tiles.length === 1) {
     // Single tile: check both directions

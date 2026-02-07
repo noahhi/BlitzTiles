@@ -1,4 +1,4 @@
-import type { Board, PlacedTile } from '@blitztiles/shared';
+import type { PlacedTile } from '@blitztiles/shared';
 import { BoardCell } from './BoardCell';
 import { useGameStore } from '../../hooks/useGameStore';
 import './GameBoard.css';
@@ -9,7 +9,6 @@ export function GameBoard() {
   const selectedTileId = useGameStore((s) => s.selectedTileId);
   const placeTile = useGameStore((s) => s.placeTile);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
-  const selectTile = useGameStore((s) => s.selectTile);
   const phase = useGameStore((s) => s.phase);
 
   if (!board || board.length === 0) return null;

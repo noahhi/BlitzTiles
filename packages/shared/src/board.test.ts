@@ -91,10 +91,7 @@ describe('isValidPlacement', () => {
 
   it('invalid first move not covering center', () => {
     const board = createEmptyBoard();
-    const tiles = [
-      makeTile('H', 0, 0),
-      makeTile('I', 0, 1),
-    ];
+    const tiles = [makeTile('H', 0, 0), makeTile('I', 0, 1)];
     const result = isValidPlacement(board, tiles);
     expect(result.valid).toBe(false);
     expect(result.reason).toMatch(/center/i);
@@ -103,41 +100,25 @@ describe('isValidPlacement', () => {
   it('valid horizontal placement', () => {
     const board = createEmptyBoard();
     // Place an existing word on the board first
-    placeOnBoard(board, [
-      makeTile('C', 7, 7),
-      makeTile('A', 7, 8),
-      makeTile('T', 7, 9),
-    ]);
+    placeOnBoard(board, [makeTile('C', 7, 7), makeTile('A', 7, 8), makeTile('T', 7, 9)]);
     // Place "MAT" vertically overlapping at T, but let's do horizontal extending
-    const tiles = [
-      makeTile('S', 7, 10),
-    ];
+    const tiles = [makeTile('S', 7, 10)];
     const result = isValidPlacement(board, tiles);
     expect(result.valid).toBe(true);
   });
 
   it('valid vertical placement', () => {
     const board = createEmptyBoard();
-    placeOnBoard(board, [
-      makeTile('C', 7, 7),
-      makeTile('A', 7, 8),
-      makeTile('T', 7, 9),
-    ]);
+    placeOnBoard(board, [makeTile('C', 7, 7), makeTile('A', 7, 8), makeTile('T', 7, 9)]);
     // Place tiles vertically from row 6 to row 8 at col 7, connecting to C at (7,7)
-    const tiles = [
-      makeTile('A', 6, 7),
-      makeTile('R', 8, 7),
-    ];
+    const tiles = [makeTile('A', 6, 7), makeTile('R', 8, 7)];
     const result = isValidPlacement(board, tiles);
     expect(result.valid).toBe(true);
   });
 
   it('invalid: tiles not in same row or column (diagonal)', () => {
     const board = createEmptyBoard();
-    const tiles = [
-      makeTile('A', 7, 7),
-      makeTile('B', 8, 8),
-    ];
+    const tiles = [makeTile('A', 7, 7), makeTile('B', 8, 8)];
     const result = isValidPlacement(board, tiles);
     expect(result.valid).toBe(false);
     expect(result.reason).toMatch(/same row or column/i);
@@ -217,15 +198,9 @@ describe('isValidPlacement', () => {
 
   it('invalid: subsequent move not connecting to any existing tile (isolated)', () => {
     const board = createEmptyBoard();
-    placeOnBoard(board, [
-      makeTile('H', 7, 7),
-      makeTile('I', 7, 8),
-    ]);
+    placeOnBoard(board, [makeTile('H', 7, 7), makeTile('I', 7, 8)]);
     // Place tiles far away with no connection
-    const tiles = [
-      makeTile('A', 0, 0),
-      makeTile('B', 0, 1),
-    ];
+    const tiles = [makeTile('A', 0, 0), makeTile('B', 0, 1)];
     const result = isValidPlacement(board, tiles);
     expect(result.valid).toBe(false);
     expect(result.reason).toMatch(/connect/i);
@@ -239,11 +214,7 @@ describe('isValidPlacement', () => {
 describe('getFormedWords', () => {
   it('single horizontal word', () => {
     const board = createEmptyBoard();
-    const tiles = [
-      makeTile('C', 7, 7),
-      makeTile('A', 7, 8),
-      makeTile('T', 7, 9),
-    ];
+    const tiles = [makeTile('C', 7, 7), makeTile('A', 7, 8), makeTile('T', 7, 9)];
     const result = getFormedWords(board, tiles);
     expect(result.words).toHaveLength(1);
     expect(result.words[0].word).toBe('CAT');
@@ -256,11 +227,7 @@ describe('getFormedWords', () => {
 
   it('single vertical word', () => {
     const board = createEmptyBoard();
-    const tiles = [
-      makeTile('D', 5, 7),
-      makeTile('O', 6, 7),
-      makeTile('G', 7, 7),
-    ];
+    const tiles = [makeTile('D', 5, 7), makeTile('O', 6, 7), makeTile('G', 7, 7)];
     const result = getFormedWords(board, tiles);
     expect(result.words).toHaveLength(1);
     expect(result.words[0].word).toBe('DOG');
@@ -274,16 +241,9 @@ describe('getFormedWords', () => {
   it('cross word formed', () => {
     const board = createEmptyBoard();
     // Place "CAT" horizontally first
-    placeOnBoard(board, [
-      makeTile('C', 7, 7),
-      makeTile('A', 7, 8),
-      makeTile('T', 7, 9),
-    ]);
+    placeOnBoard(board, [makeTile('C', 7, 7), makeTile('A', 7, 8), makeTile('T', 7, 9)]);
     // Place "O" above "A" and "R" below "A" to form "OAR" vertically
-    const tiles = [
-      makeTile('O', 6, 8),
-      makeTile('R', 8, 8),
-    ];
+    const tiles = [makeTile('O', 6, 8), makeTile('R', 8, 8)];
     const result = getFormedWords(board, tiles);
     // Should find the main vertical word "OAR" and no other words since
     // the individual cross words for O and R don't form 2+ letter words
@@ -299,18 +259,10 @@ describe('getFormedWords', () => {
   it('multiple cross words from one play', () => {
     const board = createEmptyBoard();
     // Place "CAT" horizontally at row 7
-    placeOnBoard(board, [
-      makeTile('C', 7, 7),
-      makeTile('A', 7, 8),
-      makeTile('T', 7, 9),
-    ]);
+    placeOnBoard(board, [makeTile('C', 7, 7), makeTile('A', 7, 8), makeTile('T', 7, 9)]);
     // Place "DOG" horizontally at row 8, cols 7-9
     // This creates cross words: CD, AO, TG plus the main word DOG
-    const tiles = [
-      makeTile('D', 8, 7),
-      makeTile('O', 8, 8),
-      makeTile('G', 8, 9),
-    ];
+    const tiles = [makeTile('D', 8, 7), makeTile('O', 8, 8), makeTile('G', 8, 9)];
     const result = getFormedWords(board, tiles);
     const wordStrings = result.words.map((w) => w.word).sort();
     // Main word: DOG, cross words: CD, AO, TG
@@ -337,15 +289,9 @@ describe('getFormedWords', () => {
   it('word extending existing tiles', () => {
     const board = createEmptyBoard();
     // Place "HE" on the board
-    placeOnBoard(board, [
-      makeTile('H', 7, 7),
-      makeTile('E', 7, 8),
-    ]);
+    placeOnBoard(board, [makeTile('H', 7, 7), makeTile('E', 7, 8)]);
     // Place "LP" to extend to "HELP"
-    const tiles = [
-      makeTile('L', 7, 9),
-      makeTile('P', 7, 10),
-    ];
+    const tiles = [makeTile('L', 7, 9), makeTile('P', 7, 10)];
     const result = getFormedWords(board, tiles);
     expect(result.words).toHaveLength(1);
     expect(result.words[0].word).toBe('HELP');

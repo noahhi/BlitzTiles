@@ -48,10 +48,7 @@ interface ConnectionState {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useGameConnection(
-  role: 'host' | 'guest' | null,
-  joinCode?: string,
-) {
+export function useGameConnection(role: 'host' | 'guest' | null, joinCode?: string) {
   const [state, setState] = useState<ConnectionState>({
     status: 'idle',
     roomCode: null,
@@ -114,6 +111,7 @@ export function useGameConnection(
       const code = generateRoomCode();
       const peerId = roomCodeToPeerId(code);
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ status: 'connecting', roomCode: code, error: null });
 
       const peer = new Peer(peerId);

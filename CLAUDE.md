@@ -55,6 +55,7 @@ pnpm typecheck            # TypeScript check all packages
 Pure TypeScript, zero dependencies. All exports from `packages/shared/src/index.ts`.
 
 Key modules:
+
 - `types.ts` — All TypeScript types: Tile, GameState, PlayerState, ClientMessage/ServerMessage unions
 - `constants.ts` — Tile distribution (100 tiles), 15×15 bonus square map, game defaults
 - `tileBag.ts` — createTileBag(), drawTiles(), exchangeTiles() — all take+return a PRNG seed for determinism
@@ -66,6 +67,7 @@ Key modules:
 ### @blitztiles/client
 
 React SPA. Pages: HomePage (create/join), GamePage (play). Key hooks:
+
 - `useGameStore.ts` — Zustand store, can drive local hot-seat OR networked play. Includes turn timeout scheduling (`setTimeout` auto-pass for local/host modes).
 - `useGameConnection.ts` — PeerJS WebRTC connection, translates server messages → store updates, message buffering + REQUEST_SYNC
 - `useTimer.ts` — `requestAnimationFrame` countdown hook, reads `turnStartTimestamp`/`turnTimeLimitMs` from store, returns `display`, `urgency`, `progress`, `isRunning`
@@ -73,6 +75,7 @@ React SPA. Pages: HomePage (create/join), GamePage (play). Key hooks:
 ### @blitztiles/server
 
 PartyKit server. Single file `game.ts` is the main Durable Object class:
+
 - `onConnect` — assign player index, start game when 2 connected
 - `onMessage` — validate via shared gameEngine, broadcast filtered state
 - `onClose` — mark disconnected (clock keeps running)

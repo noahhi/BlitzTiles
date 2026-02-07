@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from './useGameStore';
 
 export type Urgency = 'normal' | 'warning' | 'critical';
@@ -35,35 +35,29 @@ export function useTimer(): TimerState {
   const [remainingMs, setRemainingMs] = useState(turnTimeLimitMs);
   const rafRef = useRef<number>(0);
 
-  const tick = useCallback(() => {
-    if (!isRunning) return;
-    const elapsed = Date.now() - Date.parse(turnStartTimestamp);
-    const remaining = Math.max(0, turnTimeLimitMs - elapsed);
-    setRemainingMs(remaining);
-    if (remaining > 0) {
-      rafRef.current = requestAnimationFrame(tick);
-    }
-  }, [isRunning, turnStartTimestamp, turnTimeLimitMs]);
-
   useEffect(() => {
     if (!isRunning) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRemainingMs(turnTimeLimitMs);
       return;
     }
 
-    // Compute immediately so we don't flash stale values
-    const elapsed = Date.now() - Date.parse(turnStartTimestamp);
-    const remaining = Math.max(0, turnTimeLimitMs - elapsed);
-    setRemainingMs(remaining);
-
-    if (remaining > 0) {
-      rafRef.current = requestAnimationFrame(tick);
+    function tick() {
+      const elapsed = Date.now() - Date.parse(turnStartTimestamp);
+      const remaining = Math.max(0, turnTimeLimitMs - elapsed);
+      setRemainingMs(remaining);
+      if (remaining > 0) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
     }
+
+    // Compute immediately so we don't flash stale values
+    tick();
 
     return () => {
       cancelAnimationFrame(rafRef.current);
     };
-  }, [isRunning, turnStartTimestamp, turnTimeLimitMs, tick]);
+  }, [isRunning, turnStartTimestamp, turnTimeLimitMs]);
 
   const progress = turnTimeLimitMs > 0 ? Math.min(1, 1 - remainingMs / turnTimeLimitMs) : 0;
 
