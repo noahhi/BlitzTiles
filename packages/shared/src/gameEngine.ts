@@ -114,6 +114,7 @@ export function createGame(
     endReason: null,
     moveHistory: [],
     stateVersion: 1,
+    lastMoveTiles: [],
   };
 }
 
@@ -237,6 +238,7 @@ export function submitMove(
     turnStartTimestamp: new Date().toISOString(),
     moveHistory: [...state.moveHistory, moveRecord],
     stateVersion: state.stateVersion + 1,
+    lastMoveTiles: tiles.map((t) => ({ row: t.row, col: t.col })),
   };
 
   // Check end conditions
@@ -283,6 +285,7 @@ export function passTurn(state: GameState, playerIndex: number): PassResult {
     turnStartTimestamp: new Date().toISOString(),
     moveHistory: [...state.moveHistory, moveRecord],
     stateVersion: state.stateVersion + 1,
+    lastMoveTiles: [],
   };
 
   newState = checkEndConditions(newState);
@@ -372,6 +375,7 @@ export function exchangeTiles(
     turnStartTimestamp: new Date().toISOString(),
     moveHistory: [...state.moveHistory, moveRecord],
     stateVersion: state.stateVersion + 1,
+    lastMoveTiles: [],
   };
 
   return { success: true, state: newState };
