@@ -15,6 +15,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
   const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
+  const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const phase = useGameStore((s) => s.phase);
   const lastMoveTiles = useGameStore((s) => s.lastMoveTiles);
   const autoZoomEnabled = useSettingsStore((s) => s.autoZoom);
@@ -150,10 +151,9 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
 
     if (selectedTileId && !board[row][col].tile) {
       const tile = currentHand.find((t) => t.id === selectedTileId);
+      placeTile(selectedTileId, row, col);
       if (tile?.isBlank) {
         setPendingBlank({ tileId: selectedTileId, row, col });
-      } else {
-        placeTile(selectedTileId, row, col);
       }
     }
   };
@@ -220,10 +220,13 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
       {pendingBlank && (
         <BlankTilePicker
           onSelect={(letter) => {
-            placeTile(pendingBlank.tileId, pendingBlank.row, pendingBlank.col, letter);
+            setBlankLetter(pendingBlank.tileId, letter);
             setPendingBlank(null);
           }}
-          onCancel={() => setPendingBlank(null)}
+          onCancel={() => {
+            removePlacedTile(pendingBlank.tileId);
+            setPendingBlank(null);
+          }}
         />
       )}
     </div>

@@ -83,6 +83,7 @@ export interface GameStore {
   setConnection: (send: (msg: unknown) => void) => void;
   handleNetworkMessage: (msg: unknown) => void;
   placeTile: (tileId: string, row: number, col: number, designatedLetter?: string) => void;
+  setBlankLetter: (tileId: string, letter: string) => void;
   removePlacedTile: (tileId: string) => void;
   selectTile: (tileId: string | null) => void;
   submitMove: () => void;
@@ -540,6 +541,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       placedTiles: [...filtered, placed],
       selectedTileId: null,
     });
+  },
+
+  setBlankLetter: (tileId, letter) => {
+    set((s) => ({
+      placedTiles: s.placedTiles.map((t) =>
+        t.id === tileId ? { ...t, designatedLetter: letter } : t,
+      ),
+    }));
   },
 
   removePlacedTile: (tileId) => {

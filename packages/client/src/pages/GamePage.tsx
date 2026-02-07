@@ -47,6 +47,7 @@ function LocalGame() {
   const dictionaryLoaded = useGameStore((s) => s.dictionaryLoaded);
   const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
+  const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const reorderHand = useGameStore((s) => s.reorderHand);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
@@ -110,10 +111,9 @@ function LocalGame() {
         const rawId = active.id as string;
         const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
         const tile = currentHand.find((t) => t.id === tileId);
+        placeTile(tileId, parseInt(row), parseInt(col));
         if (tile?.isBlank) {
           setPendingBlank({ tileId, row: parseInt(row), col: parseInt(col) });
-        } else {
-          placeTile(tileId, parseInt(row), parseInt(col));
         }
       }
     },
@@ -164,10 +164,13 @@ function LocalGame() {
       {pendingBlank && (
         <BlankTilePicker
           onSelect={(letter) => {
-            placeTile(pendingBlank.tileId, pendingBlank.row, pendingBlank.col, letter);
+            setBlankLetter(pendingBlank.tileId, letter);
             setPendingBlank(null);
           }}
-          onCancel={() => setPendingBlank(null)}
+          onCancel={() => {
+            removePlacedTile(pendingBlank.tileId);
+            setPendingBlank(null);
+          }}
         />
       )}
     </DndContext>
@@ -190,6 +193,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const handleNetworkMessage = useGameStore((s) => s.handleNetworkMessage);
   const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
+  const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const reorderHand = useGameStore((s) => s.reorderHand);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
 
@@ -277,10 +281,9 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
         const rawId = active.id as string;
         const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
         const tile = currentHand.find((t) => t.id === tileId);
+        placeTile(tileId, parseInt(row), parseInt(col));
         if (tile?.isBlank) {
           setPendingBlank({ tileId, row: parseInt(row), col: parseInt(col) });
-        } else {
-          placeTile(tileId, parseInt(row), parseInt(col));
         }
       }
     },
@@ -358,10 +361,13 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
       {pendingBlank && (
         <BlankTilePicker
           onSelect={(letter) => {
-            placeTile(pendingBlank.tileId, pendingBlank.row, pendingBlank.col, letter);
+            setBlankLetter(pendingBlank.tileId, letter);
             setPendingBlank(null);
           }}
-          onCancel={() => setPendingBlank(null)}
+          onCancel={() => {
+            removePlacedTile(pendingBlank.tileId);
+            setPendingBlank(null);
+          }}
         />
       )}
     </DndContext>
