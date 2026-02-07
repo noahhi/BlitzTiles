@@ -53,6 +53,10 @@ export function HomePage() {
           </button>
         </div>
 
+        <button className="settings-link" onClick={() => navigate('/settings')}>
+          <span className="settings-icon">&#x2699;</span> Settings
+        </button>
+
         {import.meta.env.DEV &&
           (() => {
             // Use LAN IP injected by vite.config.ts so phones on the same network can connect
