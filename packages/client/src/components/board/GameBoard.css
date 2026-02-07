@@ -24,6 +24,10 @@
   will-change: transform;
 }
 
+.game-board.auto-zooming {
+  transition: transform 0.3s ease-out;
+}
+
 .zoom-reset-btn {
   position: absolute;
   bottom: 8px;

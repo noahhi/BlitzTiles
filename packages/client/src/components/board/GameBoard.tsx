@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { PlacedTile } from '@blitztiles/shared';
 import { BoardCell } from './BoardCell';
 import { BlankTilePicker } from '../tiles/BlankTilePicker';
@@ -17,9 +17,45 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
   const phase = useGameStore((s) => s.phase);
   const lastMoveTiles = useGameStore((s) => s.lastMoveTiles);
 
+  const boardRef = useRef<HTMLDivElement>(null);
+  const prevPlacedCount = useRef(placedTiles.length);
+
   const zoomEnabled = !selectedTileId && !isDragging;
-  const { scale, translateX, translateY, wasPanningRef, handlers, resetZoom, isZoomed } =
-    usePinchZoom(1, 2.5, zoomEnabled);
+  const {
+    scale,
+    translateX,
+    translateY,
+    wasPanningRef,
+    handlers,
+    resetZoom,
+    zoomToCell,
+    isZoomed,
+  } = usePinchZoom(1, 2.5, zoomEnabled);
+
+  // Auto-zoom to placed tile when first tile is placed and board is zoomed out.
+  // Toggles the CSS class directly on the DOM to avoid setState-in-effect.
+  const scaleRef = useRef(scale);
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
+
+  useEffect(() => {
+    const wasEmpty = prevPlacedCount.current === 0;
+    prevPlacedCount.current = placedTiles.length;
+
+    if (wasEmpty && placedTiles.length === 1 && scaleRef.current <= 1.05 && boardRef.current) {
+      const tile = placedTiles[0];
+      const el = boardRef.current;
+      el.classList.add('auto-zooming');
+      const onEnd = () => {
+        el.classList.remove('auto-zooming');
+        el.removeEventListener('transitionend', onEnd);
+      };
+      el.addEventListener('transitionend', onEnd);
+      // 4-tile radius = 9 tiles visible, scale = 15/9 ≈ 1.67
+      zoomToCell(tile.row, tile.col, 15 / 9, el);
+    }
+  }, [placedTiles, zoomToCell]);
   const lastMoveSet = new Set(lastMoveTiles.map((t) => `${t.row},${t.col}`));
   const pendingSet = new Set(placedTiles.map((t) => `${t.row},${t.col}`));
   const preview = useScorePreview();
@@ -112,6 +148,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
   return (
     <div className="game-board-container" {...handlers}>
       <div
+        ref={boardRef}
         className="game-board"
         style={{
           transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,

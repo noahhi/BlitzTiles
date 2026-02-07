@@ -142,6 +142,24 @@ export function usePinchZoom(minScale = 1, maxScale = 2.5, enabled = true) {
     setState({ scale: 1, translateX: 0, translateY: 0 });
   }, []);
 
+  // Zoom to center on a specific board cell (row, col) at a given scale.
+  // boardEl is the .game-board element so we can measure its rendered size.
+  const zoomToCell = useCallback(
+    (row: number, col: number, targetScale: number, boardEl: HTMLElement) => {
+      const rect = boardEl.getBoundingClientRect();
+      // Each cell is 1/15th of the board
+      const cellSize = rect.width / 15;
+      // Cell center relative to the board's center (the transform-origin)
+      const cellCenterX = (col + 0.5) * cellSize - rect.width / 2;
+      const cellCenterY = (row + 0.5) * cellSize - rect.height / 2;
+      // Translate so the cell lands at the visual center
+      const tx = -cellCenterX * targetScale;
+      const ty = -cellCenterY * targetScale;
+      setState({ scale: targetScale, translateX: tx, translateY: ty });
+    },
+    [],
+  );
+
   return {
     scale: state.scale,
     translateX: state.translateX,
@@ -153,6 +171,7 @@ export function usePinchZoom(minScale = 1, maxScale = 2.5, enabled = true) {
       onTouchEnd: handleTouchEnd,
     },
     resetZoom,
+    zoomToCell,
     isZoomed: state.scale > 1.05,
   };
 }
