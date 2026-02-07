@@ -88,6 +88,22 @@ export class Trie {
   }
 }
 
+/** Pick a random dictionary word (4-6 letters) as a room code, or fall back to random letters. */
+export function generateRoomCode(dictionary?: Trie): string {
+  if (dictionary) {
+    const words = dictionary.wordsOfLength(4, 6);
+    if (words.length > 0) {
+      return words[Math.floor(Math.random() * words.length)];
+    }
+  }
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 export function loadDictionary(text: string): Trie {
   const trie = new Trie();
   const lines = text.split(/\r?\n/);

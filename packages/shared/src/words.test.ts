@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { Trie, loadDictionary, loadCompressedDictionary } from './words';
+import { Trie, loadDictionary, loadCompressedDictionary, generateRoomCode } from './words';
 
 describe('Trie', () => {
   it('insert and has: basic word lookup works', () => {
@@ -180,5 +180,56 @@ describe('loadCompressedDictionary', () => {
     expect(trie.has('ZZZZZ')).toBe(false);
     expect(trie.has('ASDFGH')).toBe(false);
     expect(trie.has('XYZPDQ')).toBe(false);
+  });
+});
+
+describe('generateRoomCode', () => {
+  it('returns a valid dictionary word when given a trie', () => {
+    const trie = new Trie();
+    trie.insert('BLAZE');
+    trie.insert('CRIMP');
+    trie.insert('WORD');
+    trie.insert('PUZZLE');
+
+    const code = generateRoomCode(trie);
+    expect(trie.has(code)).toBe(true);
+    expect(code.length).toBeGreaterThanOrEqual(4);
+    expect(code.length).toBeLessThanOrEqual(6);
+  });
+
+  it('returns uppercase', () => {
+    const trie = new Trie();
+    trie.insert('hello');
+
+    const code = generateRoomCode(trie);
+    expect(code).toBe('HELLO');
+  });
+
+  it('falls back to 5 random letters without a dictionary', () => {
+    const code = generateRoomCode();
+    expect(code).toMatch(/^[A-Z]{5}$/);
+  });
+
+  it('falls back when trie has no words in range', () => {
+    const trie = new Trie();
+    trie.insert('HI'); // too short
+    trie.insert('EXTRAORDINARY'); // too long
+
+    const code = generateRoomCode(trie);
+    expect(code).toMatch(/^[A-Z]{5}$/);
+  });
+
+  it('generates valid codes from the real ENABLE dictionary', async () => {
+    const gzipped = readFileSync(resolve(__dirname, '../data/enable.txt.gz'));
+    const trie = await loadCompressedDictionary(new Uint8Array(gzipped));
+
+    // Generate several codes and verify they're all real words
+    for (let i = 0; i < 20; i++) {
+      const code = generateRoomCode(trie);
+      expect(trie.has(code)).toBe(true);
+      expect(code.length).toBeGreaterThanOrEqual(4);
+      expect(code.length).toBeLessThanOrEqual(6);
+      expect(code).toBe(code.toUpperCase());
+    }
   });
 });

@@ -12,8 +12,8 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import Peer, { DataConnection } from 'peerjs';
-import type { Trie } from '@blitztiles/shared';
 import { getDictionary } from './useGameStore';
+import { generateRoomCode } from '@blitztiles/shared';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,21 +23,7 @@ function roomCodeToPeerId(code: string): string {
   return `blitztiles-${code.toUpperCase()}`;
 }
 
-export function generateRoomCode(dictionary?: Trie): string {
-  if (dictionary) {
-    const words = dictionary.wordsOfLength(4, 6);
-    if (words.length > 0) {
-      return words[Math.floor(Math.random() * words.length)];
-    }
-  }
-  // Fallback: random letters
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let code = '';
-  for (let i = 0; i < 5; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
+export { generateRoomCode } from '@blitztiles/shared';
 
 // ---------------------------------------------------------------------------
 // Types
