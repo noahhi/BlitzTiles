@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import Peer, { DataConnection } from 'peerjs';
+import type { Trie } from '@blitztiles/shared';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,8 +22,15 @@ function roomCodeToPeerId(code: string): string {
   return `blitztiles-${code.toUpperCase()}`;
 }
 
-export function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // letters only, no I/O
+export function generateRoomCode(dictionary?: Trie): string {
+  if (dictionary) {
+    const words = dictionary.wordsOfLength(4, 6);
+    if (words.length > 0) {
+      return words[Math.floor(Math.random() * words.length)];
+    }
+  }
+  // Fallback: random letters
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let code = '';
   for (let i = 0; i < 5; i++) {
     code += chars[Math.floor(Math.random() * chars.length)];
@@ -215,40 +223,61 @@ export function useGameConnection(
 
     // --- Setup ---
     if (role === 'host') {
-      const code = recoveryCode || generateRoomCode();
-      const peerId = roomCodeToPeerId(code);
-
-      setState({ status: 'connecting', roomCode: code, error: null });
-
-      const peer = new Peer(peerId);
-      peerRef.current = peer;
-
-      peer.on('open', () => {
+      function setupHost(code: string) {
         if (destroyedRef.current) return;
-        setState({ status: 'waiting', roomCode: code, error: null });
-      });
+        const peerId = roomCodeToPeerId(code);
 
-      peer.on('connection', (connection) => {
-        if (destroyedRef.current) return;
-        // Close old connection if any
-        if (connRef.current && connRef.current !== connection) {
-          try {
-            connRef.current.close();
-          } catch {
-            // ignore
+        setState({ status: 'connecting', roomCode: code, error: null });
+
+        const peer = new Peer(peerId);
+        peerRef.current = peer;
+
+        peer.on('open', () => {
+          if (destroyedRef.current) return;
+          setState({ status: 'waiting', roomCode: code, error: null });
+        });
+
+        peer.on('connection', (connection) => {
+          if (destroyedRef.current) return;
+          // Close old connection if any
+          if (connRef.current && connRef.current !== connection) {
+            try {
+              connRef.current.close();
+            } catch {
+              // ignore
+            }
           }
-        }
-        clearHostTimeout();
-        connRef.current = connection;
-        setupDataChannel(connection);
-      });
+          clearHostTimeout();
+          connRef.current = connection;
+          setupDataChannel(connection);
+        });
 
-      peer.on('error', (err) => {
-        if (destroyedRef.current) return;
-        // If the peer ID is taken (host recovery race condition), it may mean
-        // our old peer hasn't been cleaned up yet. Surface as error.
-        setState({ status: 'error', roomCode: code, error: err.message });
-      });
+        peer.on('error', (err) => {
+          if (destroyedRef.current) return;
+          // If the peer ID is taken (host recovery race condition), it may mean
+          // our old peer hasn't been cleaned up yet. Surface as error.
+          setState({ status: 'error', roomCode: code, error: err.message });
+        });
+      }
+
+      if (recoveryCode) {
+        setupHost(recoveryCode);
+      } else {
+        // Load dictionary and pick a word as the room code
+        import('./useGameStore')
+          .then(({ getDictionary }) =>
+            getDictionary()
+              .then((trie) => {
+                setupHost(generateRoomCode(trie));
+              })
+              .catch(() => {
+                setupHost(generateRoomCode());
+              }),
+          )
+          .catch(() => {
+            setupHost(generateRoomCode());
+          });
+      }
     } else if (role === 'guest') {
       const codeToUse = joinCode || recoveryCode || '';
       const hostPeerId = roomCodeToPeerId(codeToUse);

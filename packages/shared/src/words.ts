@@ -1,10 +1,22 @@
 // Minimal type shims for web-standard APIs available in browsers and Node 18+
 // but not included in the ES2022 TypeScript lib.
-interface ReadableStreamReadResult<T> { done: boolean; value: T }
-interface MinimalReader<T> { read(): Promise<ReadableStreamReadResult<T>> }
-interface MinimalWriter<T> { write(chunk: T): Promise<void>; close(): Promise<void> }
-interface MinimalReadableStream<T> { getReader(): MinimalReader<T> }
-interface MinimalWritableStream<T> { getWriter(): MinimalWriter<T> }
+interface ReadableStreamReadResult<T> {
+  done: boolean;
+  value: T;
+}
+interface MinimalReader<T> {
+  read(): Promise<ReadableStreamReadResult<T>>;
+}
+interface MinimalWriter<T> {
+  write(chunk: T): Promise<void>;
+  close(): Promise<void>;
+}
+interface MinimalReadableStream<T> {
+  getReader(): MinimalReader<T>;
+}
+interface MinimalWritableStream<T> {
+  getWriter(): MinimalWriter<T>;
+}
 
 declare class DecompressionStream {
   constructor(format: 'gzip' | 'deflate' | 'deflate-raw');
@@ -58,6 +70,22 @@ export class Trie {
   get size(): number {
     return this._size;
   }
+
+  /** Collect all words with length in [min, max]. Returns uppercase strings. */
+  wordsOfLength(min: number, max: number): string[] {
+    const results: string[] = [];
+    const collect = (node: TrieNode, prefix: string) => {
+      if (node.isEnd && prefix.length >= min && prefix.length <= max) {
+        results.push(prefix);
+      }
+      if (prefix.length >= max) return;
+      for (const [ch, child] of Object.entries(node.children)) {
+        collect(child, prefix + ch);
+      }
+    };
+    collect(this.root, '');
+    return results;
+  }
 }
 
 export function loadDictionary(text: string): Trie {
@@ -91,9 +119,7 @@ export async function loadCompressedDictionary(gzipped: Uint8Array): Promise<Tri
   await writePromise;
 
   const decoder = new TextDecoder();
-  const text = chunks.map((c, i) =>
-    decoder.decode(c, { stream: i < chunks.length - 1 })
-  ).join('');
+  const text = chunks.map((c, i) => decoder.decode(c, { stream: i < chunks.length - 1 })).join('');
 
   return loadDictionary(text);
 }

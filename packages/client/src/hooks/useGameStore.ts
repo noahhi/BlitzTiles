@@ -108,7 +108,7 @@ export interface GameStore {
 
 let dictionaryPromise: Promise<Trie> | null = null;
 
-async function getDictionary(): Promise<Trie> {
+export async function getDictionary(): Promise<Trie> {
   if (!dictionaryPromise) {
     dictionaryPromise = fetch('/enable.dict.bin')
       .then((res) => {
