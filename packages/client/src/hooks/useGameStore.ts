@@ -12,6 +12,7 @@ import { create } from 'zustand';
 import type {
   Board,
   GamePhase,
+  GameVariant,
   PlacedTile,
   Tile,
   MoveRecord,
@@ -26,6 +27,9 @@ import {
   exchangePlayerTiles,
   resignGame,
   handleTurnTimeout,
+  createRacingGame,
+  submitRacingMove,
+  handleRacingRoundTimeout,
   Trie,
   loadCompressedDictionary,
 } from '@blitztiles/shared';
@@ -58,6 +62,13 @@ export interface GameStore {
   // Timer state
   turnTimeLimitMs: number;
   turnStartTimestamp: string;
+
+  // Racing mode state
+  gameVariant: GameVariant;
+  ghostTiles: PlacedTile[];
+  racingRound: number | null;
+  roundStartTimestamp: string | null;
+  racingRoundTimeLimitMs: number;
 
   // UI state
   placedTiles: PlacedTile[];
@@ -142,6 +153,7 @@ export async function getDictionary(): Promise<Trie> {
 
 /** Sync store from full GameState (local + host modes). */
 function syncFromGameState(state: GameState, viewAsPlayer: number): Partial<GameStore> {
+  const isRacing = state.config.gameVariant === 'racing';
   return {
     phase: state.phase,
     board: state.board,
@@ -149,10 +161,10 @@ function syncFromGameState(state: GameState, viewAsPlayer: number): Partial<Game
     players: state.players.map((p) => ({
       name: p.name,
       score: p.score,
-      handSize: p.hand.length,
+      handSize: isRacing ? (state.sharedRack?.length ?? 0) : p.hand.length,
       timeRemainingMs: p.timeRemainingMs,
     })),
-    currentHand: state.players[viewAsPlayer].hand,
+    currentHand: isRacing ? (state.sharedRack ?? []) : state.players[viewAsPlayer].hand,
     tileBagCount: state.tileBag.length,
     consecutivePasses: state.consecutivePasses,
     winnerIndex: state.winnerIndex,
@@ -161,6 +173,10 @@ function syncFromGameState(state: GameState, viewAsPlayer: number): Partial<Game
     turnTimeLimitMs: state.config.turnTimeLimitMs ?? 0,
     turnStartTimestamp: state.turnStartTimestamp,
     lastMoveTiles: state.lastMoveTiles,
+    gameVariant: state.config.gameVariant,
+    racingRound: state.racingRound,
+    roundStartTimestamp: state.roundStartTimestamp,
+    racingRoundTimeLimitMs: state.config.racingRoundTimeLimitMs ?? 0,
     _gameState: state,
   };
 }
@@ -169,18 +185,19 @@ function syncFromGameState(state: GameState, viewAsPlayer: number): Partial<Game
 function syncFromClientGameState(clientState: ClientGameState): Partial<GameStore> {
   const myIndex = clientState.yourPlayerIndex;
   const opIndex = myIndex === 0 ? 1 : 0;
+  const isRacing = clientState.config.gameVariant === 'racing';
 
   const players: GameStore['players'] = [];
   players[myIndex] = {
     name: clientState.you.name,
     score: clientState.you.score,
-    handSize: clientState.you.hand.length,
+    handSize: isRacing ? (clientState.sharedRack?.length ?? 0) : clientState.you.hand.length,
     timeRemainingMs: clientState.you.timeRemainingMs,
   };
   players[opIndex] = {
     name: clientState.opponent.name,
     score: clientState.opponent.score,
-    handSize: clientState.opponent.handSize,
+    handSize: isRacing ? (clientState.sharedRack?.length ?? 0) : clientState.opponent.handSize,
     timeRemainingMs: clientState.opponent.timeRemainingMs,
   };
 
@@ -189,7 +206,7 @@ function syncFromClientGameState(clientState: ClientGameState): Partial<GameStor
     board: clientState.board,
     currentPlayerIndex: clientState.currentPlayerIndex,
     players,
-    currentHand: clientState.you.hand,
+    currentHand: isRacing ? (clientState.sharedRack ?? []) : clientState.you.hand,
     tileBagCount: clientState.tileBagCount,
     consecutivePasses: clientState.consecutivePasses,
     winnerIndex: clientState.winnerIndex,
@@ -198,6 +215,10 @@ function syncFromClientGameState(clientState: ClientGameState): Partial<GameStor
     turnTimeLimitMs: clientState.config.turnTimeLimitMs ?? 0,
     turnStartTimestamp: clientState.turnStartTimestamp,
     lastMoveTiles: clientState.lastMoveTiles,
+    gameVariant: clientState.config.gameVariant,
+    racingRound: clientState.racingRound,
+    roundStartTimestamp: clientState.roundStartTimestamp,
+    racingRoundTimeLimitMs: clientState.config.racingRoundTimeLimitMs ?? 0,
     playerIndex: myIndex,
   };
 }
@@ -255,6 +276,12 @@ const INITIAL_STATE = {
 
   turnTimeLimitMs: 0,
   turnStartTimestamp: '',
+
+  gameVariant: 'classic' as GameVariant,
+  ghostTiles: [] as PlacedTile[],
+  racingRound: null as number | null,
+  roundStartTimestamp: null as string | null,
+  racingRoundTimeLimitMs: 0,
 
   placedTiles: [] as PlacedTile[],
   selectedTileId: null as string | null,
@@ -336,6 +363,68 @@ function scheduleTurnTimeout(get: () => GameStore, set: (partial: Partial<GameSt
   }, remaining);
 }
 
+/**
+ * Schedule a racing round timeout. Reuses the turnTimeoutId slot.
+ * Only runs in 'host' mode (guest relies on host).
+ */
+function scheduleRacingRoundTimeout(
+  get: () => GameStore,
+  set: (partial: Partial<GameStore>) => void,
+) {
+  clearTurnTimeout();
+
+  const { _gameState, mode } = get();
+  if (!_gameState) return;
+  if (_gameState.config.gameVariant !== 'racing') return;
+  if (_gameState.phase !== 'playing') return;
+  if (mode !== 'host') return;
+
+  const startTs = _gameState.roundStartTimestamp;
+  if (!startTs) return;
+
+  const elapsed = Date.now() - Date.parse(startTs);
+  const remaining = Math.max(0, _gameState.config.racingRoundTimeLimitMs - elapsed);
+
+  turnTimeoutId = setTimeout(() => {
+    const currentState = get()._gameState;
+    if (!currentState || currentState.phase !== 'playing') return;
+
+    const result = handleRacingRoundTimeout(currentState);
+    const { _sendFn } = get();
+
+    set({
+      ...syncFromGameState(result.state, 0),
+      placedTiles: [],
+      selectedTileId: null,
+      lastMoveError: null,
+      ghostTiles: [],
+    });
+
+    // Host: broadcast to guest
+    if (_sendFn) {
+      _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+      _sendFn({
+        type: 'ROUND_RESULT',
+        winnerIndex: null,
+        score: 0,
+        words: [],
+        roundNumber: currentState.racingRound ?? 0,
+      });
+    }
+
+    // Schedule next round's timeout
+    if (!result.gameOver) {
+      scheduleRacingRoundTimeout(get, set);
+    }
+
+    if (result.state.phase === 'finished') {
+      clearSession();
+    } else {
+      persistGameSession(get);
+    }
+  }, remaining);
+}
+
 // ---------------------------------------------------------------------------
 // Session persistence helper
 // ---------------------------------------------------------------------------
@@ -388,7 +477,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   initHostGame: async (roomCode, config) => {
     const currentSendFn = get()._sendFn;
     const dictionary = await getDictionary();
-    const gameState = createGame('online', 'You', 'Opponent', config);
+    const isRacing = config?.gameVariant === 'racing';
+    const gameState = isRacing
+      ? createRacingGame('online', 'You', 'Opponent', config)
+      : createGame('online', 'You', 'Opponent', config);
 
     set({
       ...INITIAL_STATE,
@@ -403,7 +495,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Send initial state to guest
     currentSendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(gameState, 1) });
-    scheduleTurnTimeout(get, set);
+    if (isRacing) {
+      scheduleRacingRoundTimeout(get, set);
+    } else {
+      scheduleTurnTimeout(get, set);
+    }
     persistGameSession(get);
   },
 
@@ -494,6 +590,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return;
       }
 
+      const isRacing = _gameState.config.gameVariant === 'racing';
+
       switch (msg.type) {
         case 'SUBMIT_MOVE': {
           if (!Array.isArray(msg.tiles)) {
@@ -501,23 +599,56 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return;
           }
           const tiles = msg.tiles as PlacedTile[];
-          // Only allow if it's guest's turn (player 1)
-          if (_gameState.currentPlayerIndex !== 1) {
-            _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Not your turn' });
-            return;
-          }
-          const result = submitMove(_gameState, 1, tiles, _dictionary);
-          if (result.success) {
-            set({
-              ...syncFromGameState(result.state, 0),
-              placedTiles: [],
-              lastMoveError: null,
-            });
-            _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
-            scheduleTurnTimeout(get, set);
-            persistGameSession(get);
+
+          if (isRacing) {
+            // Racing: no turn check, guest submits as player 1
+            const result = submitRacingMove(_gameState, 1, tiles, _dictionary);
+            if (result.success) {
+              set({
+                ...syncFromGameState(result.state, 0),
+                placedTiles: [],
+                lastMoveError: null,
+                ghostTiles: [],
+              });
+              _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+              _sendFn?.({
+                type: 'ROUND_RESULT',
+                winnerIndex: 1,
+                score: result.score,
+                words: result.formedWords,
+                roundNumber: _gameState.racingRound ?? 0,
+              });
+              scheduleRacingRoundTimeout(get, set);
+              persistGameSession(get);
+            } else {
+              _sendFn?.({ type: 'MOVE_REJECTED', reason: result.reason });
+            }
           } else {
-            _sendFn?.({ type: 'MOVE_REJECTED', reason: result.reason });
+            // Classic: turn-based
+            if (_gameState.currentPlayerIndex !== 1) {
+              _sendFn?.({ type: 'MOVE_REJECTED', reason: 'Not your turn' });
+              return;
+            }
+            const result = submitMove(_gameState, 1, tiles, _dictionary);
+            if (result.success) {
+              set({
+                ...syncFromGameState(result.state, 0),
+                placedTiles: [],
+                lastMoveError: null,
+              });
+              _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+              scheduleTurnTimeout(get, set);
+              persistGameSession(get);
+            } else {
+              _sendFn?.({ type: 'MOVE_REJECTED', reason: result.reason });
+            }
+          }
+          break;
+        }
+        case 'PLACEMENT_UPDATE': {
+          // Racing: relay ghost tiles to host's display
+          if (isRacing && Array.isArray(msg.tiles)) {
+            set({ ghostTiles: msg.tiles as PlacedTile[] });
           }
           break;
         }
@@ -614,6 +745,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
           set({ lastMoveError: msg.reason });
           break;
         }
+        case 'GHOST_TILES': {
+          if (Array.isArray(msg.tiles)) {
+            set({ ghostTiles: msg.tiles as PlacedTile[] });
+          }
+          break;
+        }
+        case 'ROUND_RESULT': {
+          // Clear ghost tiles and placed tiles when round ends
+          set({ ghostTiles: [], placedTiles: [], selectedTileId: null });
+          break;
+        }
       }
     }
   },
@@ -621,7 +763,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // ─── Tile placement (works in all modes) ────────────────────────
 
   placeTile: (tileId, row, col, designatedLetter) => {
-    const { currentHand, placedTiles, board } = get();
+    const { currentHand, placedTiles, board, gameVariant, mode, _sendFn } = get();
     if (board.length === 0) return;
 
     const tile = currentHand.find((t) => t.id === tileId);
@@ -641,10 +783,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       designatedLetter: designatedLetter || tile.letter || 'A',
     };
 
+    const newPlaced = [...filtered, placed];
     set({
-      placedTiles: [...filtered, placed],
+      placedTiles: newPlaced,
       selectedTileId: null,
     });
+
+    // Racing + online: send placement update for ghost tiles
+    if (gameVariant === 'racing' && mode !== 'local' && _sendFn) {
+      _sendFn({ type: mode === 'host' ? 'GHOST_TILES' : 'PLACEMENT_UPDATE', tiles: newPlaced });
+    }
   },
 
   setBlankLetter: (tileId, letter) => {
@@ -656,9 +804,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   removePlacedTile: (tileId) => {
-    set((s) => ({
-      placedTiles: s.placedTiles.filter((t) => t.id !== tileId),
-    }));
+    const { gameVariant, mode, _sendFn, placedTiles } = get();
+    const newPlaced = placedTiles.filter((t) => t.id !== tileId);
+    set({ placedTiles: newPlaced });
+
+    // Racing + online: send placement update for ghost tiles
+    if (gameVariant === 'racing' && mode !== 'local' && _sendFn) {
+      _sendFn({ type: mode === 'host' ? 'GHOST_TILES' : 'PLACEMENT_UPDATE', tiles: newPlaced });
+    }
   },
 
   selectTile: (tileId) => {
@@ -682,6 +835,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Host or local: run engine locally
     if (!_gameState || !_dictionary) return;
+
+    const isRacing = _gameState.config.gameVariant === 'racing';
+
+    if (isRacing) {
+      // Racing: host submits own move (player 0)
+      const result = submitRacingMove(_gameState, 0, placedTiles, _dictionary);
+      if (!result.success) {
+        set({ lastMoveError: result.reason });
+        return;
+      }
+      set({
+        ...syncFromGameState(result.state, 0),
+        placedTiles: [],
+        selectedTileId: null,
+        lastMoveError: null,
+        ghostTiles: [],
+      });
+      if (_sendFn) {
+        _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
+        _sendFn({
+          type: 'ROUND_RESULT',
+          winnerIndex: 0,
+          score: result.score,
+          words: result.formedWords,
+          roundNumber: _gameState.racingRound ?? 0,
+        });
+      }
+      scheduleRacingRoundTimeout(get, set);
+      persistGameSession(get);
+      return;
+    }
 
     const currentPlayer = _gameState.currentPlayerIndex;
     const result = submitMove(_gameState, currentPlayer, placedTiles, _dictionary);
