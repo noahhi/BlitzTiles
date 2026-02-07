@@ -79,6 +79,18 @@
   transform: translateY(-50%);
 }
 
+.dev-qr {
+  text-align: center;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.dev-qr-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
 .join-row {
   display: flex;
   gap: 8px;

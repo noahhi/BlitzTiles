@@ -2,11 +2,19 @@ import type { BoardCell as BoardCellType, BonusType, PlacedTile } from '@blitzti
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import './BoardCell.css';
 
+interface PendingEdges {
+  top: boolean;
+  bottom: boolean;
+  left: boolean;
+  right: boolean;
+}
+
 interface BoardCellProps {
   cell: BoardCellType;
   pendingTile?: PlacedTile;
   isSelected: boolean;
   isLastMove: boolean;
+  pendingEdges?: PendingEdges;
   onClick: () => void;
 }
 
@@ -17,7 +25,14 @@ const BONUS_LABELS: Record<NonNullable<BonusType>, string> = {
   TW: 'TW',
 };
 
-export function BoardCell({ cell, pendingTile, isSelected, isLastMove, onClick }: BoardCellProps) {
+export function BoardCell({
+  cell,
+  pendingTile,
+  isSelected,
+  isLastMove,
+  pendingEdges,
+  onClick,
+}: BoardCellProps) {
   const tile = pendingTile || cell.tile;
   const isCenter = cell.row === 7 && cell.col === 7;
   const isPending = !!pendingTile;
@@ -52,8 +67,22 @@ export function BoardCell({ cell, pendingTile, isSelected, isLastMove, onClick }
     .filter(Boolean)
     .join(' ');
 
+  // Build inset box-shadow for outer edges of the pending tile group
+  const cellStyle: React.CSSProperties | undefined = pendingEdges
+    ? {
+        boxShadow: [
+          pendingEdges.top && 'inset 0 2px 0 0 var(--tile-selected)',
+          pendingEdges.bottom && 'inset 0 -2px 0 0 var(--tile-selected)',
+          pendingEdges.left && 'inset 2px 0 0 0 var(--tile-selected)',
+          pendingEdges.right && 'inset -2px 0 0 0 var(--tile-selected)',
+        ]
+          .filter(Boolean)
+          .join(', '),
+      }
+    : undefined;
+
   return (
-    <div ref={setNodeRef} className={classNames} onClick={onClick}>
+    <div ref={setNodeRef} className={classNames} style={cellStyle} onClick={onClick}>
       {tile ? (
         <div
           ref={isPending ? setDragRef : undefined}

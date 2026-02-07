@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import './HomePage.css';
 
 export function HomePage() {
@@ -51,6 +52,20 @@ export function HomePage() {
             Local (Hot Seat)
           </button>
         </div>
+
+        {import.meta.env.DEV &&
+          (() => {
+            // Use LAN IP injected by vite.config.ts so phones on the same network can connect
+            const loc = window.location;
+            const lanHost = typeof __DEV_LAN_IP__ !== 'undefined' ? __DEV_LAN_IP__ : loc.hostname;
+            const lanUrl = `${loc.protocol}//${lanHost}:${loc.port}${loc.pathname}`;
+            return (
+              <div className="dev-qr">
+                <QRCodeSVG value={lanUrl} size={120} bgColor="transparent" fgColor="#666" />
+                <div className="dev-qr-label">{lanUrl}</div>
+              </div>
+            );
+          })()}
 
         <div className="home-rules">
           <h3>How to play</h3>

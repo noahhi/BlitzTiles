@@ -6,7 +6,7 @@ import { useGameStore } from '../../hooks/useGameStore';
 import { usePinchZoom } from '../../hooks/usePinchZoom';
 import './GameBoard.css';
 
-export function GameBoard() {
+export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
   const board = useGameStore((s) => s.board);
   const placedTiles = useGameStore((s) => s.placedTiles);
   const selectedTileId = useGameStore((s) => s.selectedTileId);
@@ -16,8 +16,11 @@ export function GameBoard() {
   const phase = useGameStore((s) => s.phase);
   const lastMoveTiles = useGameStore((s) => s.lastMoveTiles);
 
-  const { scale, translateX, translateY, handlers, resetZoom, isZoomed } = usePinchZoom();
+  const zoomEnabled = !selectedTileId && !isDragging;
+  const { scale, translateX, translateY, wasPanningRef, handlers, resetZoom, isZoomed } =
+    usePinchZoom(1, 2.5, zoomEnabled);
   const lastMoveSet = new Set(lastMoveTiles.map((t) => `${t.row},${t.col}`));
+  const pendingSet = new Set(placedTiles.map((t) => `${t.row},${t.col}`));
 
   const [pendingBlank, setPendingBlank] = useState<{
     tileId: string;
@@ -33,6 +36,7 @@ export function GameBoard() {
 
   const handleCellClick = (row: number, col: number) => {
     if (phase !== 'playing') return;
+    if (wasPanningRef.current) return;
 
     const pending = getPendingTile(row, col);
     if (pending) {
@@ -60,16 +64,29 @@ export function GameBoard() {
         }}
       >
         {board.map((row, rowIdx) =>
-          row.map((cell, colIdx) => (
-            <BoardCell
-              key={`${rowIdx}-${colIdx}`}
-              cell={cell}
-              pendingTile={getPendingTile(rowIdx, colIdx)}
-              isSelected={false}
-              isLastMove={lastMoveSet.has(`${rowIdx},${colIdx}`)}
-              onClick={() => handleCellClick(rowIdx, colIdx)}
-            />
-          )),
+          row.map((cell, colIdx) => {
+            const isPending = pendingSet.has(`${rowIdx},${colIdx}`);
+            return (
+              <BoardCell
+                key={`${rowIdx}-${colIdx}`}
+                cell={cell}
+                pendingTile={getPendingTile(rowIdx, colIdx)}
+                isSelected={false}
+                isLastMove={lastMoveSet.has(`${rowIdx},${colIdx}`)}
+                pendingEdges={
+                  isPending
+                    ? {
+                        top: !pendingSet.has(`${rowIdx - 1},${colIdx}`),
+                        bottom: !pendingSet.has(`${rowIdx + 1},${colIdx}`),
+                        left: !pendingSet.has(`${rowIdx},${colIdx - 1}`),
+                        right: !pendingSet.has(`${rowIdx},${colIdx + 1}`),
+                      }
+                    : undefined
+                }
+                onClick={() => handleCellClick(rowIdx, colIdx)}
+              />
+            );
+          }),
         )}
       </div>
       {isZoomed && (

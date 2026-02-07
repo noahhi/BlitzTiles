@@ -146,7 +146,7 @@ function LocalGame() {
       <div className="game-page">
         <TurnBanner />
         <GameHeader />
-        <GameBoard />
+        <GameBoard isDragging={activeTileId !== null} />
         <div className="game-bottom">
           <TileRack />
           <GameControls />
@@ -340,7 +340,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
       <div className="game-page">
         <TurnBanner />
         <GameHeader />
-        <GameBoard />
+        <GameBoard isDragging={activeTileId !== null} />
         <div className="game-bottom">
           <TileRack />
           <GameControls />
