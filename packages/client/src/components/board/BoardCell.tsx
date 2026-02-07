@@ -2,7 +2,7 @@ import type { BoardCell as BoardCellType, BonusType, PlacedTile } from '@blitzti
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import './BoardCell.css';
 
-interface PendingEdges {
+interface EdgeFlags {
   top: boolean;
   bottom: boolean;
   left: boolean;
@@ -14,7 +14,8 @@ interface BoardCellProps {
   pendingTile?: PlacedTile;
   isSelected: boolean;
   isLastMove: boolean;
-  pendingEdges?: PendingEdges;
+  pendingEdges?: EdgeFlags;
+  lastMoveEdges?: EdgeFlags;
   scorePreview?: number | null;
   onClick: () => void;
 }
@@ -32,6 +33,7 @@ export function BoardCell({
   isSelected,
   isLastMove,
   pendingEdges,
+  lastMoveEdges,
   scorePreview,
   onClick,
 }: BoardCellProps) {
@@ -69,22 +71,35 @@ export function BoardCell({
     .filter(Boolean)
     .join(' ');
 
-  // Build inset box-shadow for outer edges of the pending tile group
-  const cellStyle: React.CSSProperties | undefined = pendingEdges
+  // Build inset box-shadow for outer edges of tile groups
+  const pendingShadows: string[] = [];
+  if (pendingEdges) {
+    if (pendingEdges.top) pendingShadows.push('inset 0 2px 0 0 var(--tile-selected)');
+    if (pendingEdges.bottom) pendingShadows.push('inset 0 -2px 0 0 var(--tile-selected)');
+    if (pendingEdges.left) pendingShadows.push('inset 2px 0 0 0 var(--tile-selected)');
+    if (pendingEdges.right) pendingShadows.push('inset -2px 0 0 0 var(--tile-selected)');
+  }
+  const cellStyle: React.CSSProperties | undefined =
+    pendingShadows.length > 0 ? { boxShadow: pendingShadows.join(', ') } : undefined;
+
+  // Last-move outline goes on the ::after pseudo-element (fades via CSS animation)
+  const lastMoveStyle: React.CSSProperties | undefined = lastMoveEdges
     ? {
-        boxShadow: [
-          pendingEdges.top && 'inset 0 2px 0 0 var(--tile-selected)',
-          pendingEdges.bottom && 'inset 0 -2px 0 0 var(--tile-selected)',
-          pendingEdges.left && 'inset 2px 0 0 0 var(--tile-selected)',
-          pendingEdges.right && 'inset -2px 0 0 0 var(--tile-selected)',
+        ['--lm-shadow' as string]: [
+          lastMoveEdges.top && 'inset 0 2px 0 0 rgba(255, 171, 0, 0.45)',
+          lastMoveEdges.bottom && 'inset 0 -2px 0 0 rgba(255, 171, 0, 0.45)',
+          lastMoveEdges.left && 'inset 2px 0 0 0 rgba(255, 171, 0, 0.45)',
+          lastMoveEdges.right && 'inset -2px 0 0 0 rgba(255, 171, 0, 0.45)',
         ]
           .filter(Boolean)
           .join(', '),
       }
     : undefined;
 
+  const mergedStyle = cellStyle || lastMoveStyle ? { ...cellStyle, ...lastMoveStyle } : undefined;
+
   return (
-    <div ref={setNodeRef} className={classNames} style={cellStyle} onClick={onClick}>
+    <div ref={setNodeRef} className={classNames} style={mergedStyle} onClick={onClick}>
       {tile ? (
         <div
           ref={isPending ? setDragRef : undefined}

@@ -104,17 +104,24 @@
   cursor: grabbing;
 }
 
-.board-cell.last-move .placed-tile {
-  box-shadow: 0 0 0 2px var(--warning);
-  animation: last-move-glow 2s ease-in-out;
+/* Last-move outline: unified rectangle that fades over 10s */
+.board-cell.last-move::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: var(--lm-shadow, none);
+  animation: last-move-fade 10s ease-out forwards;
 }
 
-@keyframes last-move-glow {
+@keyframes last-move-fade {
   0% {
-    box-shadow: 0 0 8px 2px rgba(255, 171, 0, 0.6);
+    opacity: 1;
   }
   100% {
-    box-shadow: 0 0 0 2px var(--warning);
+    opacity: 0;
   }
 }
 
@@ -137,13 +144,13 @@
   position: absolute;
   bottom: -1px;
   right: -1px;
-  font-size: 0.4rem;
+  font-size: 0.35rem;
   font-weight: 700;
   color: #fff;
   background: var(--success);
-  padding: 1px 2px;
+  padding: 0px 2px;
   border-radius: 2px;
-  line-height: 1;
+  line-height: 1.2;
   pointer-events: none;
   z-index: 3;
   white-space: nowrap;

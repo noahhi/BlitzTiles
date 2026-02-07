@@ -82,13 +82,14 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
         {board.map((row, rowIdx) =>
           row.map((cell, colIdx) => {
             const isPending = pendingSet.has(`${rowIdx},${colIdx}`);
+            const isLastMove = lastMoveSet.has(`${rowIdx},${colIdx}`);
             return (
               <BoardCell
                 key={`${rowIdx}-${colIdx}`}
                 cell={cell}
                 pendingTile={getPendingTile(rowIdx, colIdx)}
                 isSelected={false}
-                isLastMove={lastMoveSet.has(`${rowIdx},${colIdx}`)}
+                isLastMove={isLastMove}
                 pendingEdges={
                   isPending
                     ? {
@@ -96,6 +97,16 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
                         bottom: !pendingSet.has(`${rowIdx + 1},${colIdx}`),
                         left: !pendingSet.has(`${rowIdx},${colIdx - 1}`),
                         right: !pendingSet.has(`${rowIdx},${colIdx + 1}`),
+                      }
+                    : undefined
+                }
+                lastMoveEdges={
+                  isLastMove
+                    ? {
+                        top: !lastMoveSet.has(`${rowIdx - 1},${colIdx}`),
+                        bottom: !lastMoveSet.has(`${rowIdx + 1},${colIdx}`),
+                        left: !lastMoveSet.has(`${rowIdx},${colIdx - 1}`),
+                        right: !lastMoveSet.has(`${rowIdx},${colIdx + 1}`),
                       }
                     : undefined
                 }
