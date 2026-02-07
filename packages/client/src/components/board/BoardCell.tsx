@@ -42,6 +42,7 @@ export function BoardCell({
   const tile = pendingTile || cell.tile;
   const isCenter = cell.row === 7 && cell.col === 7;
   const isPending = !!pendingTile;
+  const hasConflict = !!pendingTile && !!ghostTile; // both players placed here
 
   const droppableId = `cell-${cell.row}-${cell.col}`;
   const { setNodeRef, isOver } = useDroppable({
@@ -69,6 +70,7 @@ export function BoardCell({
     isPending ? 'pending' : '',
     isOver ? 'drag-over' : '',
     isLastMove ? 'last-move' : '',
+    hasConflict ? 'conflict' : '',
   ]
     .filter(Boolean)
     .join(' ');
