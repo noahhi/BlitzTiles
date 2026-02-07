@@ -6,7 +6,10 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nInitialize project: git repo, pnpm workspace, CLAUDE.md\n\nSet up the BlitzTiles monorepo foundation:\n- pnpm workspace config with packages/* layout\n- Root package.json with workspace scripts\n- .gitignore for node_modules, dist, env files\n- CLAUDE.md with full project context for AI agents\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd shared package scaffold with types and constants\n\n- tsconfig.base.json with strict TS config for all packages\n- @blitztiles/shared package.json with vitest\n- types.ts: Tile, PlacedTile, Board, GameState, PlayerState,\n  ClientMessage/ServerMessage discriminated unions, GameConfig\n- constants.ts: standard tile distribution \\(100 tiles\\),\n  15x15 bonus square map \\(DL/TL/DW/TW\\), default game config\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(pnpm install:*)",
-      "Bash(npm --version:*)"
+      "Bash(npm --version:*)",
+      "Bash(git checkout:*)",
+      "Bash(git rebase:*)",
+      "Bash(GIT_EDITOR=true git rebase:*)"
     ]
   }
 }
