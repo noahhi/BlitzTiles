@@ -108,6 +108,8 @@ export interface GameState {
   moveHistory: MoveRecord[];
   /** Monotonically increasing, used for state reconciliation. */
   stateVersion: number;
+  /** Positions of tiles placed in the last move, for highlight display. */
+  lastMoveTiles: { row: number; col: number }[];
 }
 
 export interface MoveRecord {
@@ -158,6 +160,7 @@ export interface ClientGameState {
   endReason: string | null;
   moveHistory: MoveRecord[];
   stateVersion: number;
+  lastMoveTiles: { row: number; col: number }[];
 }
 
 export type ServerMessage =

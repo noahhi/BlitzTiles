@@ -39,7 +39,7 @@ export { createEmptyBoard, isValidPlacement, getFormedWords } from './board.js';
 export { scoreTurn, getEndGameBonus } from './scoring.js';
 
 // Words / Dictionary
-export { Trie, loadDictionary } from './words.js';
+export { Trie, loadDictionary, loadCompressedDictionary } from './words.js';
 
 // Game engine
 export {

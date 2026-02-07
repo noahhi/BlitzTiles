@@ -27,6 +27,7 @@ import {
   resignGame,
   handleTurnTimeout,
   Trie,
+  loadCompressedDictionary,
 } from '@blitztiles/shared';
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,9 @@ export interface GameStore {
   selectedTileId: string | null;
   lastMoveError: string | null;
   dictionaryLoaded: boolean;
+  lastMoveTiles: { row: number; col: number }[];
+  exchangeMode: boolean;
+  exchangeSelection: Set<string>;
 
   // Network state
   mode: GameMode;
@@ -79,6 +83,7 @@ export interface GameStore {
   setConnection: (send: (msg: unknown) => void) => void;
   handleNetworkMessage: (msg: unknown) => void;
   placeTile: (tileId: string, row: number, col: number, designatedLetter?: string) => void;
+  setBlankLetter: (tileId: string, letter: string) => void;
   removePlacedTile: (tileId: string) => void;
   selectTile: (tileId: string | null) => void;
   submitMove: () => void;
@@ -89,6 +94,8 @@ export interface GameStore {
   shuffleHand: () => void;
   reorderHand: (activeId: string, overId: string) => void;
   clearError: () => void;
+  setExchangeMode: (on: boolean) => void;
+  toggleExchangeTile: (tileId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,20 +104,26 @@ export interface GameStore {
 
 let dictionaryPromise: Promise<Trie> | null = null;
 
-/** Accept-all dictionary — every word is valid. */
-class AcceptAllTrie extends Trie {
-  has(word: string): boolean {
-    return word.length > 0;
-  }
-  get size(): number {
-    return Infinity;
-  }
-}
-
 async function getDictionary(): Promise<Trie> {
-  // For now, accept all words — no dictionary validation
   if (!dictionaryPromise) {
-    dictionaryPromise = Promise.resolve(new AcceptAllTrie());
+    dictionaryPromise = fetch('/enable.dict.bin')
+      .then((res) => {
+        if (!res.ok) throw new Error(`Dictionary fetch failed: ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((buf) => {
+        console.log(`[BlitzTiles] Dictionary loaded (${buf.byteLength} bytes), decompressing...`);
+        return loadCompressedDictionary(new Uint8Array(buf));
+      })
+      .then((trie) => {
+        console.log(`[BlitzTiles] Dictionary ready (${trie.size} words)`);
+        return trie;
+      })
+      .catch((err) => {
+        console.error('[BlitzTiles] Dictionary load failed:', err);
+        dictionaryPromise = null; // allow retry
+        throw err;
+      });
   }
   return dictionaryPromise;
 }
@@ -139,6 +152,7 @@ function syncFromGameState(state: GameState, viewAsPlayer: number): Partial<Game
     moveHistory: state.moveHistory,
     turnTimeLimitMs: state.config.turnTimeLimitMs ?? 0,
     turnStartTimestamp: state.turnStartTimestamp,
+    lastMoveTiles: state.lastMoveTiles,
     _gameState: state,
   };
 }
@@ -175,6 +189,7 @@ function syncFromClientGameState(clientState: ClientGameState): Partial<GameStor
     moveHistory: clientState.moveHistory,
     turnTimeLimitMs: clientState.config.turnTimeLimitMs ?? 0,
     turnStartTimestamp: clientState.turnStartTimestamp,
+    lastMoveTiles: clientState.lastMoveTiles,
     playerIndex: myIndex,
   };
 }
@@ -206,6 +221,7 @@ function filterStateForPlayer(state: GameState, forPlayer: number): ClientGameSt
     endReason: state.endReason,
     moveHistory: state.moveHistory,
     stateVersion: state.stateVersion,
+    lastMoveTiles: state.lastMoveTiles,
   };
 }
 
@@ -232,6 +248,9 @@ const INITIAL_STATE = {
   selectedTileId: null as string | null,
   lastMoveError: null as string | null,
   dictionaryLoaded: false,
+  lastMoveTiles: [] as { row: number; col: number }[],
+  exchangeMode: false,
+  exchangeSelection: new Set<string>(),
 
   mode: 'local' as GameMode,
   playerIndex: 0,
@@ -524,6 +543,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  setBlankLetter: (tileId, letter) => {
+    set((s) => ({
+      placedTiles: s.placedTiles.map((t) =>
+        t.id === tileId ? { ...t, designatedLetter: letter } : t,
+      ),
+    }));
+  },
+
   removePlacedTile: (tileId) => {
     set((s) => ({
       placedTiles: s.placedTiles.filter((t) => t.id !== tileId),
@@ -626,6 +653,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       placedTiles: [],
       selectedTileId: null,
       lastMoveError: null,
+      exchangeMode: false,
+      exchangeSelection: new Set(),
     });
 
     if (mode === 'host' && _sendFn) {
@@ -692,5 +721,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   clearError: () => {
     set({ lastMoveError: null });
+  },
+
+  setExchangeMode: (on: boolean) => {
+    if (on) {
+      get().recallTiles();
+      set({ exchangeMode: true, exchangeSelection: new Set() });
+    } else {
+      set({ exchangeMode: false, exchangeSelection: new Set() });
+    }
+  },
+
+  toggleExchangeTile: (tileId: string) => {
+    const prev = get().exchangeSelection;
+    const next = new Set(prev);
+    if (next.has(tileId)) {
+      next.delete(tileId);
+    } else {
+      next.add(tileId);
+    }
+    set({ exchangeSelection: next });
   },
 }));

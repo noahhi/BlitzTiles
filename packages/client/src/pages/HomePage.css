@@ -79,6 +79,41 @@
   transform: translateY(-50%);
 }
 
+.settings-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+}
+
+.settings-link:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.settings-icon {
+  font-size: 1.1rem;
+}
+
+.dev-qr {
+  text-align: center;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.dev-qr-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
 .join-row {
   display: flex;
   gap: 8px;

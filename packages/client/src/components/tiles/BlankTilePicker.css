@@ -43,7 +43,7 @@
   font-size: 1.1rem;
   font-weight: 700;
   background: var(--tile-bg, #e8c170);
-  color: var(--text, #1a1a2e);
+  color: var(--tile-text, #1a1a2e);
   border: none;
   border-radius: 6px;
   cursor: pointer;

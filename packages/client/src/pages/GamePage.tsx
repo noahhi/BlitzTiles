@@ -7,7 +7,7 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
-  rectIntersection,
+  closestCenter,
 } from '@dnd-kit/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -17,9 +17,12 @@ import { GameHeader } from '../components/game/GameHeader';
 import { GameControls } from '../components/game/GameControls';
 import { GameOverModal } from '../components/game/GameOverModal';
 import { BlankTilePicker } from '../components/tiles/BlankTilePicker';
+import { LandscapeWarning } from '../components/game/LandscapeWarning';
+import { TurnBanner } from '../components/game/TurnBanner';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGameStore } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
+import { useWakeLock } from '../hooks/useWakeLock';
 import './GamePage.css';
 
 export function GamePage() {
@@ -44,8 +47,12 @@ function LocalGame() {
   const dictionaryLoaded = useGameStore((s) => s.dictionaryLoaded);
   const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
+  const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const reorderHand = useGameStore((s) => s.reorderHand);
+  const removePlacedTile = useGameStore((s) => s.removePlacedTile);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
+
+  useWakeLock(phase === 'playing');
 
   const [pendingBlank, setPendingBlank] = useState<{
     tileId: string;
@@ -55,11 +62,14 @@ function LocalGame() {
 
   // Configure sensors for DndContext
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        distance: 3,
       },
     }),
     useSensor(KeyboardSensor),
@@ -83,6 +93,14 @@ function LocalGame() {
       const activeType = active.data.current?.type;
       const overType = over.data.current?.type;
 
+      // Return board tile to rack
+      if (activeType === 'board-tile' && over.id === 'rack-drop-zone') {
+        const rawId = active.id as string;
+        const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
+        removePlacedTile(tileId);
+        return;
+      }
+
       if (activeType === 'rack-tile' && overType === 'rack-tile') {
         reorderHand(active.id as string, over.id as string);
       } else if (
@@ -90,19 +108,20 @@ function LocalGame() {
         over.id.toString().startsWith('cell-')
       ) {
         const [, row, col] = over.id.toString().split('-');
-        const tileId = active.id as string;
+        const rawId = active.id as string;
+        const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
         const tile = currentHand.find((t) => t.id === tileId);
+        placeTile(tileId, parseInt(row), parseInt(col));
         if (tile?.isBlank) {
           setPendingBlank({ tileId, row: parseInt(row), col: parseInt(col) });
-        } else {
-          placeTile(tileId, parseInt(row), parseInt(col));
         }
       }
     },
-    [currentHand, placeTile, reorderHand],
+    [currentHand, placeTile, reorderHand, removePlacedTile],
   );
 
-  const activeTile = currentHand.find((t) => t.id === activeTileId) || null;
+  const resolvedTileId = activeTileId?.startsWith('board-') ? activeTileId.slice(6) : activeTileId;
+  const activeTile = currentHand.find((t) => t.id === resolvedTileId) || null;
 
   if (!dictionaryLoaded || phase === 'waiting') {
     return (
@@ -115,7 +134,7 @@ function LocalGame() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={rectIntersection}
+      collisionDetection={closestCenter}
       onDragStart={(event) => setActiveTileId(event.active.id as string)}
       onDragCancel={() => setActiveTileId(null)}
       onDragEnd={(event) => {
@@ -123,9 +142,11 @@ function LocalGame() {
         setActiveTileId(null);
       }}
     >
+      <LandscapeWarning />
       <div className="game-page">
+        <TurnBanner />
         <GameHeader />
-        <GameBoard />
+        <GameBoard isDragging={activeTileId !== null} />
         <div className="game-bottom">
           <TileRack />
           <GameControls />
@@ -143,10 +164,13 @@ function LocalGame() {
       {pendingBlank && (
         <BlankTilePicker
           onSelect={(letter) => {
-            placeTile(pendingBlank.tileId, pendingBlank.row, pendingBlank.col, letter);
+            setBlankLetter(pendingBlank.tileId, letter);
             setPendingBlank(null);
           }}
-          onCancel={() => setPendingBlank(null)}
+          onCancel={() => {
+            removePlacedTile(pendingBlank.tileId);
+            setPendingBlank(null);
+          }}
         />
       )}
     </DndContext>
@@ -169,7 +193,11 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const handleNetworkMessage = useGameStore((s) => s.handleNetworkMessage);
   const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
+  const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const reorderHand = useGameStore((s) => s.reorderHand);
+  const removePlacedTile = useGameStore((s) => s.removePlacedTile);
+
+  useWakeLock(phase === 'playing');
 
   const [initialized, setInitialized] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
@@ -181,11 +209,14 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
 
   // Configure sensors for DndContext
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        distance: 3,
       },
     }),
     useSensor(KeyboardSensor),
@@ -232,6 +263,14 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
       const activeType = active.data.current?.type;
       const overType = over.data.current?.type;
 
+      // Return board tile to rack
+      if (activeType === 'board-tile' && over.id === 'rack-drop-zone') {
+        const rawId = active.id as string;
+        const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
+        removePlacedTile(tileId);
+        return;
+      }
+
       if (activeType === 'rack-tile' && overType === 'rack-tile') {
         reorderHand(active.id as string, over.id as string);
       } else if (
@@ -239,19 +278,20 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
         over.id.toString().startsWith('cell-')
       ) {
         const [, row, col] = over.id.toString().split('-');
-        const tileId = active.id as string;
+        const rawId = active.id as string;
+        const tileId = rawId.startsWith('board-') ? rawId.slice(6) : rawId;
         const tile = currentHand.find((t) => t.id === tileId);
+        placeTile(tileId, parseInt(row), parseInt(col));
         if (tile?.isBlank) {
           setPendingBlank({ tileId, row: parseInt(row), col: parseInt(col) });
-        } else {
-          placeTile(tileId, parseInt(row), parseInt(col));
         }
       }
     },
-    [currentHand, placeTile, reorderHand],
+    [currentHand, placeTile, reorderHand, removePlacedTile],
   );
 
-  const activeTile = currentHand.find((t) => t.id === activeTileId) || null;
+  const resolvedTileId = activeTileId?.startsWith('board-') ? activeTileId.slice(6) : activeTileId;
+  const activeTile = currentHand.find((t) => t.id === resolvedTileId) || null;
 
   if (!gameReady) {
     return (
@@ -291,7 +331,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={rectIntersection}
+      collisionDetection={closestCenter}
       onDragStart={(event) => setActiveTileId(event.active.id as string)}
       onDragCancel={() => setActiveTileId(null)}
       onDragEnd={(event) => {
@@ -299,9 +339,11 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
         setActiveTileId(null);
       }}
     >
+      <LandscapeWarning />
       <div className="game-page">
+        <TurnBanner />
         <GameHeader />
-        <GameBoard />
+        <GameBoard isDragging={activeTileId !== null} />
         <div className="game-bottom">
           <TileRack />
           <GameControls />
@@ -319,10 +361,13 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
       {pendingBlank && (
         <BlankTilePicker
           onSelect={(letter) => {
-            placeTile(pendingBlank.tileId, pendingBlank.row, pendingBlank.col, letter);
+            setBlankLetter(pendingBlank.tileId, letter);
             setPendingBlank(null);
           }}
-          onCancel={() => setPendingBlank(null)}
+          onCancel={() => {
+            removePlacedTile(pendingBlank.tileId);
+            setPendingBlank(null);
+          }}
         />
       )}
     </DndContext>
@@ -341,11 +386,20 @@ function LobbyShare({ roomCode }: { roomCode: string }) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback: select the text so the user can copy manually
+      // Clipboard API unavailable (e.g. non-HTTPS) — use textarea fallback
+      const ta = document.createElement('textarea');
+      ta.value = shareUrl;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShare = async () => {

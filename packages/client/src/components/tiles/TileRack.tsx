@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import type { Tile } from '@blitztiles/shared';
 import { useGameStore } from '../../hooks/useGameStore';
@@ -17,15 +18,27 @@ function RackTile({ tile }: { tile: Tile }) {
   };
 
   const placedTiles = useGameStore((s) => s.placedTiles);
+  const exchangeMode = useGameStore((s) => s.exchangeMode);
+  const exchangeSelection = useGameStore((s) => s.exchangeSelection);
+  const toggleExchangeTile = useGameStore((s) => s.toggleExchangeTile);
   const isPlaced = placedTiles.some((t) => t.id === tile.id);
+  const isExchangeSelected = exchangeMode && exchangeSelection.has(tile.id);
+
+  const handleClick = exchangeMode
+    ? (e: React.MouseEvent) => {
+        e.stopPropagation();
+        toggleExchangeTile(tile.id);
+      }
+    : undefined;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
-      className={`rack-tile ${isDragging ? 'dragging' : ''} ${isPlaced ? 'placed' : ''}`}
+      {...(exchangeMode ? {} : listeners)}
+      {...(exchangeMode ? {} : attributes)}
+      className={`rack-tile ${isDragging ? 'dragging' : ''} ${isPlaced ? 'placed' : ''} ${isExchangeSelected ? 'exchange-selected' : ''}`}
+      onClick={handleClick}
     >
       <span className="rack-tile-letter">{tile.isBlank ? '' : tile.letter}</span>
       {tile.value > 0 && <span className="rack-tile-value">{tile.value}</span>}
@@ -38,6 +51,11 @@ export function TileRack() {
   const phase = useGameStore((s) => s.phase);
   const tileIds = currentHand.map((t) => t.id);
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'rack-drop-zone',
+    data: { type: 'rack-zone' },
+  });
+
   if (phase !== 'playing') {
     return (
       <div className="tile-rack-container">
@@ -48,7 +66,7 @@ export function TileRack() {
 
   return (
     <div className="tile-rack-container">
-      <div className="tile-rack">
+      <div ref={setNodeRef} className={`tile-rack ${isOver ? 'rack-drag-over' : ''}`}>
         <SortableContext items={tileIds} strategy={horizontalListSortingStrategy}>
           {currentHand.map((tile) => (
             <RackTile key={tile.id} tile={tile} />

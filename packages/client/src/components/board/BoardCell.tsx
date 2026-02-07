@@ -2,10 +2,21 @@ import type { BoardCell as BoardCellType, BonusType, PlacedTile } from '@blitzti
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import './BoardCell.css';
 
+interface EdgeFlags {
+  top: boolean;
+  bottom: boolean;
+  left: boolean;
+  right: boolean;
+}
+
 interface BoardCellProps {
   cell: BoardCellType;
   pendingTile?: PlacedTile;
   isSelected: boolean;
+  isLastMove: boolean;
+  pendingEdges?: EdgeFlags;
+  lastMoveEdges?: EdgeFlags;
+  scorePreview?: number | null;
   onClick: () => void;
 }
 
@@ -16,7 +27,16 @@ const BONUS_LABELS: Record<NonNullable<BonusType>, string> = {
   TW: 'TW',
 };
 
-export function BoardCell({ cell, pendingTile, isSelected, onClick }: BoardCellProps) {
+export function BoardCell({
+  cell,
+  pendingTile,
+  isSelected,
+  isLastMove,
+  pendingEdges,
+  lastMoveEdges,
+  scorePreview,
+  onClick,
+}: BoardCellProps) {
   const tile = pendingTile || cell.tile;
   const isCenter = cell.row === 7 && cell.col === 7;
   const isPending = !!pendingTile;
@@ -33,7 +53,7 @@ export function BoardCell({ cell, pendingTile, isSelected, onClick }: BoardCellP
     attributes,
     isDragging,
   } = useDraggable({
-    id: pendingTile?.id || `cell-${cell.row}-${cell.col}-static`,
+    id: pendingTile ? `board-${pendingTile.id}` : `cell-${cell.row}-${cell.col}-static`,
     data: { type: 'board-tile' },
     disabled: !pendingTile,
   });
@@ -45,13 +65,41 @@ export function BoardCell({ cell, pendingTile, isSelected, onClick }: BoardCellP
     isSelected ? 'selected' : '',
     tile ? 'has-tile' : '',
     isPending ? 'pending' : '',
-    isOver ? 'drag-over' : '', // Add drag-over class
+    isOver ? 'drag-over' : '',
+    isLastMove ? 'last-move' : '',
   ]
     .filter(Boolean)
     .join(' ');
 
+  // Build inset box-shadow for outer edges of tile groups
+  const pendingShadows: string[] = [];
+  if (pendingEdges) {
+    if (pendingEdges.top) pendingShadows.push('inset 0 2px 0 0 var(--tile-selected)');
+    if (pendingEdges.bottom) pendingShadows.push('inset 0 -2px 0 0 var(--tile-selected)');
+    if (pendingEdges.left) pendingShadows.push('inset 2px 0 0 0 var(--tile-selected)');
+    if (pendingEdges.right) pendingShadows.push('inset -2px 0 0 0 var(--tile-selected)');
+  }
+  const cellStyle: React.CSSProperties | undefined =
+    pendingShadows.length > 0 ? { boxShadow: pendingShadows.join(', ') } : undefined;
+
+  // Last-move outline goes on the ::after pseudo-element (fades via CSS animation)
+  const lastMoveStyle: React.CSSProperties | undefined = lastMoveEdges
+    ? {
+        ['--lm-shadow' as string]: [
+          lastMoveEdges.top && 'inset 0 2px 0 0 rgba(255, 171, 0, 0.45)',
+          lastMoveEdges.bottom && 'inset 0 -2px 0 0 rgba(255, 171, 0, 0.45)',
+          lastMoveEdges.left && 'inset 2px 0 0 0 rgba(255, 171, 0, 0.45)',
+          lastMoveEdges.right && 'inset -2px 0 0 0 rgba(255, 171, 0, 0.45)',
+        ]
+          .filter(Boolean)
+          .join(', '),
+      }
+    : undefined;
+
+  const mergedStyle = cellStyle || lastMoveStyle ? { ...cellStyle, ...lastMoveStyle } : undefined;
+
   return (
-    <div ref={setNodeRef} className={classNames} onClick={onClick}>
+    <div ref={setNodeRef} className={classNames} style={mergedStyle} onClick={onClick}>
       {tile ? (
         <div
           ref={isPending ? setDragRef : undefined}
@@ -70,6 +118,7 @@ export function BoardCell({ cell, pendingTile, isSelected, onClick }: BoardCellP
           {isCenter && !cell.bonus && <span className="center-star">★</span>}
         </>
       )}
+      {scorePreview != null && <span className="score-badge">+{scorePreview}</span>}
     </div>
   );
 }

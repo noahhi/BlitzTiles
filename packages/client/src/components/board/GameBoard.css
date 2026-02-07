@@ -5,6 +5,7 @@
   flex: 1;
   padding: 4px;
   overflow: hidden;
+  position: relative;
 }
 
 .game-board {
@@ -20,4 +21,23 @@
   aspect-ratio: 1;
   max-width: 560px;
   touch-action: none;
+  will-change: transform;
+}
+
+.game-board.auto-zooming {
+  transition: transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.zoom-reset-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  z-index: 5;
+  cursor: pointer;
 }
