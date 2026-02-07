@@ -20,9 +20,11 @@ import { BlankTilePicker } from '../components/tiles/BlankTilePicker';
 import { LandscapeWarning } from '../components/game/LandscapeWarning';
 import { TurnBanner } from '../components/game/TurnBanner';
 import { QRCodeSVG } from 'qrcode.react';
-import { useGameStore } from '../hooks/useGameStore';
+import { useGameStore, filterStateForPlayer } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { loadSession, clearSession } from '../hooks/sessionPersistence';
+import type { PersistedSession } from '../hooks/sessionPersistence';
 import './GamePage.css';
 
 export function GamePage() {
@@ -183,12 +185,28 @@ function LocalGame() {
 
 function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: string }) {
   const navigate = useNavigate();
-  const connection = useGameConnection(role, role === 'guest' ? joinCode : undefined);
+
+  // Check for saved session to determine if this is a recovery
+  const [recovery] = useState<PersistedSession | null>(() => {
+    const session = loadSession();
+    if (session && session.role === role) return session;
+    return null;
+  });
+
+  const recoveryCode = recovery?.roomCode || undefined;
+
+  const connection = useGameConnection(
+    role,
+    role === 'guest' ? joinCode || recoveryCode : undefined,
+    recoveryCode,
+  );
 
   const phase = useGameStore((s) => s.phase);
   const dictionaryLoaded = useGameStore((s) => s.dictionaryLoaded);
   const initHostGame = useGameStore((s) => s.initHostGame);
   const initGuestGame = useGameStore((s) => s.initGuestGame);
+  const restoreHostGame = useGameStore((s) => s.restoreHostGame);
+  const restoreGuestGame = useGameStore((s) => s.restoreGuestGame);
   const setConnection = useGameStore((s) => s.setConnection);
   const handleNetworkMessage = useGameStore((s) => s.handleNetworkMessage);
   const currentHand = useGameStore((s) => s.currentHand);
@@ -222,6 +240,20 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     useSensor(KeyboardSensor),
   );
 
+  // Restore game state from localStorage on mount (before connection is ready)
+  useEffect(() => {
+    if (!recovery || initialized) return;
+
+    if (role === 'host' && recovery.gameState) {
+      restoreHostGame(recovery.gameState, recovery.roomCode).then(() => setInitialized(true));
+    } else if (role === 'guest' && recovery.clientGameState) {
+      restoreGuestGame(recovery.clientGameState, recovery.roomCode).then(() =>
+        setInitialized(true),
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Wire incoming messages to store
   useEffect(() => {
     connection.setOnMessage((msg: unknown) => {
@@ -230,27 +262,58 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection.setOnMessage, handleNetworkMessage]);
 
-  // When connected: set send function and init game
+  // When connected: set send function and init game (or sync after recovery)
   useEffect(() => {
-    if (connection.status === 'connected' && !initialized) {
-      setConnection(connection.send);
+    if (connection.status !== 'connected') return;
 
-      if (role === 'host') {
-        initHostGame().then(() => setInitialized(true));
-      } else {
-        initGuestGame().then(() => {
-          setInitialized(true);
-          // Request current game state from host in case initial message was missed
-          connection.send({ type: 'REQUEST_SYNC' });
-        });
+    // Always update the send function when (re)connected
+    setConnection(connection.send);
+
+    if (initialized) {
+      // Recovery or reconnect: request sync from host
+      if (role === 'guest') {
+        connection.send({ type: 'REQUEST_SYNC' });
       }
+      // Host: send current state to reconnecting guest
+      if (role === 'host') {
+        const state = useGameStore.getState()._gameState;
+        if (state) {
+          connection.send({ type: 'GAME_STATE', state: filterStateForPlayer(state, 1) });
+        }
+      }
+      return;
+    }
+
+    // Fresh game init (no recovery)
+    const roomCode = connection.roomCode || '';
+    if (role === 'host') {
+      initHostGame(roomCode).then(() => setInitialized(true));
+    } else {
+      initGuestGame(roomCode).then(() => {
+        setInitialized(true);
+        connection.send({ type: 'REQUEST_SYNC' });
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connection.status, initialized]);
+  }, [connection.status]);
+
+  // Clear session on unmount (navigating away)
+  useEffect(() => {
+    return () => {
+      // Don't clear if we're in a recoverable state
+      const { phase: currentPhase } = useGameStore.getState();
+      if (currentPhase === 'finished') {
+        clearSession();
+      }
+    };
+  }, []);
 
   // Show lobby/waiting screen until game is ready
   const gameReady =
-    connection.status === 'connected' && initialized && dictionaryLoaded && phase === 'playing';
+    (connection.status === 'connected' || connection.status === 'reconnecting') &&
+    initialized &&
+    dictionaryLoaded &&
+    (phase === 'playing' || phase === 'finished');
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -293,6 +356,11 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const resolvedTileId = activeTileId?.startsWith('board-') ? activeTileId.slice(6) : activeTileId;
   const activeTile = currentHand.find((t) => t.id === resolvedTileId) || null;
 
+  const handleAbandon = () => {
+    clearSession();
+    navigate('/');
+  };
+
   if (!gameReady) {
     return (
       <div className="game-loading">
@@ -300,6 +368,15 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
           {connection.status === 'connecting' && <div className="loading-text">Connecting...</div>}
 
           {connection.status === 'waiting' && <LobbyShare roomCode={connection.roomCode ?? ''} />}
+
+          {connection.status === 'reconnecting' && (
+            <div className="reconnect-box">
+              <div className="loading-text">Reconnecting...</div>
+              <button className="btn-secondary" onClick={handleAbandon}>
+                Abandon Game
+              </button>
+            </div>
+          )}
 
           {connection.status === 'connected' && !gameReady && (
             <div className="loading-text">Starting game...</div>
@@ -309,7 +386,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
             <div className="error-box">
               <div>Connection failed</div>
               <div className="error-detail">{connection.error}</div>
-              <button className="btn-primary" onClick={() => navigate('/')}>
+              <button className="btn-primary" onClick={handleAbandon}>
                 Back
               </button>
             </div>
@@ -317,9 +394,10 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
 
           {connection.status === 'disconnected' && (
             <div className="error-box">
-              <div>Opponent disconnected</div>
-              <button className="btn-primary" onClick={() => navigate('/')}>
-                Back
+              <div>Connection lost</div>
+              {connection.roomCode && <LobbyShare roomCode={connection.roomCode} />}
+              <button className="btn-primary" onClick={handleAbandon}>
+                Abandon Game
               </button>
             </div>
           )}
@@ -349,6 +427,17 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
           <GameControls />
         </div>
         <GameOverModal />
+
+        {connection.status === 'reconnecting' && (
+          <div className="reconnect-overlay">
+            <div className="reconnect-content">
+              <div className="loading-text">Reconnecting...</div>
+              <button className="btn-secondary" onClick={handleAbandon}>
+                Abandon Game
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <DragOverlay dropAnimation={null}>
         {activeTile ? (
