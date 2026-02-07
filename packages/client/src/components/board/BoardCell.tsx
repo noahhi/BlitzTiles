@@ -6,6 +6,7 @@ interface BoardCellProps {
   cell: BoardCellType;
   pendingTile?: PlacedTile;
   isSelected: boolean;
+  isLastMove: boolean;
   onClick: () => void;
 }
 
@@ -16,7 +17,7 @@ const BONUS_LABELS: Record<NonNullable<BonusType>, string> = {
   TW: 'TW',
 };
 
-export function BoardCell({ cell, pendingTile, isSelected, onClick }: BoardCellProps) {
+export function BoardCell({ cell, pendingTile, isSelected, isLastMove, onClick }: BoardCellProps) {
   const tile = pendingTile || cell.tile;
   const isCenter = cell.row === 7 && cell.col === 7;
   const isPending = !!pendingTile;
@@ -33,7 +34,7 @@ export function BoardCell({ cell, pendingTile, isSelected, onClick }: BoardCellP
     attributes,
     isDragging,
   } = useDraggable({
-    id: pendingTile?.id || `cell-${cell.row}-${cell.col}-static`,
+    id: pendingTile ? `board-${pendingTile.id}` : `cell-${cell.row}-${cell.col}-static`,
     data: { type: 'board-tile' },
     disabled: !pendingTile,
   });
@@ -45,7 +46,8 @@ export function BoardCell({ cell, pendingTile, isSelected, onClick }: BoardCellP
     isSelected ? 'selected' : '',
     tile ? 'has-tile' : '',
     isPending ? 'pending' : '',
-    isOver ? 'drag-over' : '', // Add drag-over class
+    isOver ? 'drag-over' : '',
+    isLastMove ? 'last-move' : '',
   ]
     .filter(Boolean)
     .join(' ');

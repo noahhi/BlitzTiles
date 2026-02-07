@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '../../hooks/useGameStore';
+import { useScorePreview } from '../../hooks/useScorePreview';
 import './GameControls.css';
 
 export function GameControls() {
@@ -14,9 +15,25 @@ export function GameControls() {
   const currentHand = useGameStore((s) => s.currentHand);
   const exchangeTilesAction = useGameStore((s) => s.exchangeTiles);
   const tileBagCount = useGameStore((s) => s.tileBagCount);
+  const moveHistory = useGameStore((s) => s.moveHistory);
+
+  const preview = useScorePreview();
 
   const [exchangeMode, setExchangeMode] = useState(false);
   const [exchangeSelection, setExchangeSelection] = useState<Set<string>>(new Set());
+
+  // Track which popup has been dismissed via onAnimationEnd
+  const [dismissedAt, setDismissedAt] = useState(0);
+  // Capture mount-time move count so we skip pre-existing moves
+  const [mountMoveCount] = useState(() => moveHistory.length);
+
+  // Derive popup from moveHistory data — no effect needed
+  const lastMove = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null;
+  const showPopup =
+    lastMove?.action === 'submit' &&
+    lastMove.score > 0 &&
+    moveHistory.length > mountMoveCount &&
+    moveHistory.length > dismissedAt;
 
   if (phase !== 'playing') return null;
 
@@ -53,6 +70,15 @@ export function GameControls() {
 
   return (
     <div className="game-controls">
+      {showPopup && lastMove && (
+        <div
+          key={moveHistory.length}
+          className="score-popup"
+          onAnimationEnd={() => setDismissedAt(moveHistory.length)}
+        >
+          +{lastMove.score}
+        </div>
+      )}
       {lastMoveError && (
         <div className="move-error" onClick={clearError}>
           {lastMoveError}
@@ -108,8 +134,13 @@ export function GameControls() {
             Pass
           </button>
           <button className="btn-primary" onClick={submitMoveAction} disabled={!hasPlacedTiles}>
-            Submit
+            Submit{preview.score !== null ? ` (+${preview.score})` : ''}
           </button>
+        </div>
+      )}
+      {preview.isValid && preview.words.length > 0 && (
+        <div className="score-preview">
+          {preview.words.join(', ')} = +{preview.score}
         </div>
       )}
     </div>

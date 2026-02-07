@@ -3,6 +3,7 @@ import type { PlacedTile } from '@blitztiles/shared';
 import { BoardCell } from './BoardCell';
 import { BlankTilePicker } from '../tiles/BlankTilePicker';
 import { useGameStore } from '../../hooks/useGameStore';
+import { usePinchZoom } from '../../hooks/usePinchZoom';
 import './GameBoard.css';
 
 export function GameBoard() {
@@ -13,6 +14,10 @@ export function GameBoard() {
   const placeTile = useGameStore((s) => s.placeTile);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
   const phase = useGameStore((s) => s.phase);
+  const lastMoveTiles = useGameStore((s) => s.lastMoveTiles);
+
+  const { scale, translateX, translateY, handlers, resetZoom, isZoomed } = usePinchZoom();
+  const lastMoveSet = new Set(lastMoveTiles.map((t) => `${t.row},${t.col}`));
 
   const [pendingBlank, setPendingBlank] = useState<{
     tileId: string;
@@ -46,8 +51,14 @@ export function GameBoard() {
   };
 
   return (
-    <div className="game-board-container">
-      <div className="game-board">
+    <div className="game-board-container" {...handlers}>
+      <div
+        className="game-board"
+        style={{
+          transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+          transformOrigin: 'center center',
+        }}
+      >
         {board.map((row, rowIdx) =>
           row.map((cell, colIdx) => (
             <BoardCell
@@ -55,11 +66,17 @@ export function GameBoard() {
               cell={cell}
               pendingTile={getPendingTile(rowIdx, colIdx)}
               isSelected={false}
+              isLastMove={lastMoveSet.has(`${rowIdx},${colIdx}`)}
               onClick={() => handleCellClick(rowIdx, colIdx)}
             />
           )),
         )}
       </div>
+      {isZoomed && (
+        <button className="zoom-reset-btn" onClick={resetZoom}>
+          Reset Zoom
+        </button>
+      )}
       {pendingBlank && (
         <BlankTilePicker
           onSelect={(letter) => {
