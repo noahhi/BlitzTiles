@@ -39,6 +39,8 @@ export function GameHeader() {
   const phase = useGameStore((s) => s.phase);
   const mode = useGameStore((s) => s.mode);
   const playerIndex = useGameStore((s) => s.playerIndex);
+  const gameVariant = useGameStore((s) => s.gameVariant);
+  const racingRound = useGameStore((s) => s.racingRound);
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
 
@@ -52,7 +54,8 @@ export function GameHeader() {
   };
 
   const isOnline = mode === 'host' || mode === 'guest';
-  const isMyTurn = isOnline ? currentPlayerIndex === playerIndex : true; // always "your turn" in local (shared device)
+  const isRacing = gameVariant === 'racing';
+  const isMyTurn = isRacing ? true : isOnline ? currentPlayerIndex === playerIndex : true;
 
   // In online mode, label as "You" and "Opponent"
   const getLabel = (idx: number) => {
@@ -67,7 +70,7 @@ export function GameHeader() {
         &#x2190;
       </button>
       <div
-        className={`player-info ${currentPlayerIndex === 0 ? 'active' : ''} ${isOnline && playerIndex === 0 ? 'you' : ''}`}
+        className={`player-info ${isRacing || currentPlayerIndex === 0 ? 'active' : ''} ${isOnline && playerIndex === 0 ? 'you' : ''}`}
       >
         <div className="player-name">
           {getLabel(0)}
@@ -84,17 +87,19 @@ export function GameHeader() {
         <div className="bag-count">{tileBagCount} tiles left</div>
         {phase === 'playing' && (
           <div className={`turn-indicator ${isMyTurn ? 'your-turn' : ''}`}>
-            {isOnline
-              ? isMyTurn
-                ? 'Your turn'
-                : "Opponent's turn"
-              : `${players[currentPlayerIndex].name}'s turn`}
+            {isRacing
+              ? `Round ${racingRound ?? 1}`
+              : isOnline
+                ? isMyTurn
+                  ? 'Your turn'
+                  : "Opponent's turn"
+                : `${players[currentPlayerIndex].name}'s turn`}
           </div>
         )}
       </div>
 
       <div
-        className={`player-info ${currentPlayerIndex === 1 ? 'active' : ''} ${isOnline && playerIndex === 1 ? 'you' : ''}`}
+        className={`player-info ${isRacing || currentPlayerIndex === 1 ? 'active' : ''} ${isOnline && playerIndex === 1 ? 'you' : ''}`}
       >
         <div className="player-name">
           {getLabel(1)}
