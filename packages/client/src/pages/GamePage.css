@@ -12,6 +12,7 @@
   gap: 4px;
   padding: 4px 0;
   background: var(--bg);
+  position: relative;
 }
 
 .game-loading {
