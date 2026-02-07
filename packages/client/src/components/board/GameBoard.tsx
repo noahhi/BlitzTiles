@@ -56,14 +56,17 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
     ) {
       const tile = placedTiles[0];
       const el = boardRef.current;
-      el.classList.add('auto-zooming');
-      const onEnd = () => {
-        el.classList.remove('auto-zooming');
-        el.removeEventListener('transitionend', onEnd);
-      };
-      el.addEventListener('transitionend', onEnd);
-      // 4-tile radius = 9 tiles visible, scale = 15/9 ≈ 1.67
-      zoomToCell(tile.row, tile.col, 15 / 9, el);
+      // Let the placed tile render first, then start the zoom transition
+      requestAnimationFrame(() => {
+        el.classList.add('auto-zooming');
+        const onEnd = () => {
+          el.classList.remove('auto-zooming');
+          el.removeEventListener('transitionend', onEnd);
+        };
+        el.addEventListener('transitionend', onEnd);
+        // 4-tile radius = 9 tiles visible, scale = 15/9 ≈ 1.67
+        zoomToCell(tile.row, tile.col, 15 / 9, el);
+      });
     }
   }, [placedTiles, zoomToCell, autoZoomEnabled]);
   const lastMoveSet = new Set(lastMoveTiles.map((t) => `${t.row},${t.col}`));
