@@ -84,7 +84,7 @@ export function createRacingGame(
       name: 'Player 1',
       hand: [], // empty — racing uses sharedRack
       score: 0,
-      timeRemainingMs: Infinity,
+      timeRemainingMs: 0, // racing mode doesn't use player timers
       connected: true,
     },
     {
@@ -92,7 +92,7 @@ export function createRacingGame(
       name: 'Player 2',
       hand: [], // empty — racing uses sharedRack
       score: 0,
-      timeRemainingMs: Infinity,
+      timeRemainingMs: 0, // racing mode doesn't use player timers
       connected: true,
     },
   ];
