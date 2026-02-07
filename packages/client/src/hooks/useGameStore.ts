@@ -29,6 +29,7 @@ import {
   Trie,
   loadCompressedDictionary,
 } from '@blitztiles/shared';
+import { saveSession, clearSession } from './sessionPersistence';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,14 +73,17 @@ export interface GameStore {
   playerIndex: number;
 
   // Internal (not exposed to components directly)
+  _roomCode: string | null;
   _gameState: GameState | null;
   _dictionary: Trie | null;
   _sendFn: ((msg: unknown) => void) | null;
 
   // Actions
   initLocalGame: (config?: GameConfig) => Promise<void>;
-  initHostGame: (config?: GameConfig) => Promise<void>;
-  initGuestGame: () => Promise<void>;
+  initHostGame: (roomCode: string, config?: GameConfig) => Promise<void>;
+  initGuestGame: (roomCode: string) => Promise<void>;
+  restoreHostGame: (savedState: GameState, roomCode: string) => Promise<void>;
+  restoreGuestGame: (savedClientState: ClientGameState, roomCode: string) => Promise<void>;
   setConnection: (send: (msg: unknown) => void) => void;
   handleNetworkMessage: (msg: unknown) => void;
   placeTile: (tileId: string, row: number, col: number, designatedLetter?: string) => void;
@@ -195,7 +199,7 @@ function syncFromClientGameState(clientState: ClientGameState): Partial<GameStor
 }
 
 /** Filter full GameState into a ClientGameState for a specific player. */
-function filterStateForPlayer(state: GameState, forPlayer: number): ClientGameState {
+export function filterStateForPlayer(state: GameState, forPlayer: number): ClientGameState {
   const opponentIndex = forPlayer === 0 ? 1 : 0;
   const opponent = state.players[opponentIndex];
 
@@ -255,6 +259,7 @@ const INITIAL_STATE = {
   mode: 'local' as GameMode,
   playerIndex: 0,
 
+  _roomCode: null as string | null,
   _gameState: null as GameState | null,
   _dictionary: null as Trie | null,
   _sendFn: null as ((msg: unknown) => void) | null,
@@ -311,7 +316,41 @@ function scheduleTurnTimeout(get: () => GameStore, set: (partial: Partial<GameSt
 
     // Schedule the next turn's timeout
     scheduleTurnTimeout(get, set);
+
+    // Persist or clear session
+    if (currentMode !== 'local') {
+      if (result.state.phase === 'finished') {
+        clearSession();
+      } else {
+        persistGameSession(get);
+      }
+    }
   }, remaining);
+}
+
+// ---------------------------------------------------------------------------
+// Session persistence helper
+// ---------------------------------------------------------------------------
+
+function persistGameSession(get: () => GameStore) {
+  const { mode, _roomCode, _gameState } = get();
+  if (!_roomCode || mode === 'local') return;
+
+  if (mode === 'host' && _gameState) {
+    if (_gameState.phase === 'finished') {
+      clearSession();
+    } else {
+      saveSession({
+        savedAt: new Date().toISOString(),
+        role: 'host',
+        roomCode: _roomCode,
+        gameState: _gameState,
+        clientGameState: null,
+        stateVersion: _gameState.stateVersion,
+      });
+    }
+  }
+  // Guest persistence is handled in handleNetworkMessage when receiving GAME_STATE
 }
 
 // ---------------------------------------------------------------------------
@@ -338,7 +377,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     scheduleTurnTimeout(get, set);
   },
 
-  initHostGame: async (config) => {
+  initHostGame: async (roomCode, config) => {
     const currentSendFn = get()._sendFn;
     const dictionary = await getDictionary();
     const gameState = createGame('online', 'You', 'Opponent', config);
@@ -351,14 +390,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       dictionaryLoaded: true,
       _dictionary: dictionary,
       _sendFn: currentSendFn, // preserve the connection
+      _roomCode: roomCode,
     });
 
     // Send initial state to guest
     currentSendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(gameState, 1) });
     scheduleTurnTimeout(get, set);
+    persistGameSession(get);
   },
 
-  initGuestGame: async () => {
+  initGuestGame: async (roomCode) => {
     clearTurnTimeout();
     // Reset all state and set mode synchronously so incoming messages are processed immediately
     set({
@@ -366,12 +407,47 @@ export const useGameStore = create<GameStore>((set, get) => ({
       mode: 'guest',
       playerIndex: 1,
       _sendFn: get()._sendFn, // preserve the connection
+      _roomCode: roomCode,
     });
     const dictionary = await getDictionary();
     set({
       dictionaryLoaded: true,
       _dictionary: dictionary,
     });
+  },
+
+  restoreHostGame: async (savedState, roomCode) => {
+    const currentSendFn = get()._sendFn;
+    const dictionary = await getDictionary();
+
+    set({
+      ...INITIAL_STATE,
+      ...syncFromGameState(savedState, 0),
+      mode: 'host',
+      playerIndex: 0,
+      dictionaryLoaded: true,
+      _dictionary: dictionary,
+      _sendFn: currentSendFn,
+      _roomCode: roomCode,
+    });
+    scheduleTurnTimeout(get, set);
+  },
+
+  restoreGuestGame: async (savedClientState, roomCode) => {
+    clearTurnTimeout();
+    const dictionary = await getDictionary();
+
+    set({
+      ...INITIAL_STATE,
+      ...syncFromClientGameState(savedClientState),
+      mode: 'guest',
+      playerIndex: savedClientState.yourPlayerIndex,
+      dictionaryLoaded: true,
+      _dictionary: dictionary,
+      _sendFn: get()._sendFn,
+      _roomCode: roomCode,
+    });
+    // Guest will REQUEST_SYNC after reconnecting to get fresh state
   },
 
   setConnection: (send) => {
@@ -431,6 +507,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             });
             _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
             scheduleTurnTimeout(get, set);
+            persistGameSession(get);
           } else {
             _sendFn?.({ type: 'MOVE_REJECTED', reason: result.reason });
           }
@@ -449,6 +526,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           });
           _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
           scheduleTurnTimeout(get, set);
+          persistGameSession(get);
           break;
         }
         case 'EXCHANGE': {
@@ -470,6 +548,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             });
             _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
             scheduleTurnTimeout(get, set);
+            persistGameSession(get);
           } else {
             _sendFn?.({ type: 'MOVE_REJECTED', reason: result.reason });
           }
@@ -482,6 +561,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             placedTiles: [],
           });
           _sendFn?.({ type: 'GAME_STATE', state: filterStateForPlayer(result, 1) });
+          clearSession();
           break;
         }
       }
@@ -500,6 +580,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
             selectedTileId: null,
             lastMoveError: null,
           });
+          // Persist guest state for recovery
+          const { _roomCode } = get();
+          if (_roomCode) {
+            if (clientState.phase === 'finished') {
+              clearSession();
+            } else {
+              saveSession({
+                savedAt: new Date().toISOString(),
+                role: 'guest',
+                roomCode: _roomCode,
+                gameState: null,
+                clientGameState: clientState,
+                stateVersion: clientState.stateVersion,
+              });
+            }
+          }
           break;
         }
         case 'MOVE_REJECTED': {
@@ -600,6 +696,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
     }
     scheduleTurnTimeout(get, set);
+    if (mode === 'host') persistGameSession(get);
   },
 
   passTurn: () => {
@@ -627,6 +724,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
     }
     scheduleTurnTimeout(get, set);
+    if (mode === 'host') persistGameSession(get);
   },
 
   exchangeTiles: (tileIds) => {
@@ -661,6 +759,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result.state, 1) });
     }
     scheduleTurnTimeout(get, set);
+    if (mode === 'host') persistGameSession(get);
   },
 
   resign: () => {
@@ -686,6 +785,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (mode === 'host' && _sendFn) {
       _sendFn({ type: 'GAME_STATE', state: filterStateForPlayer(result, 1) });
     }
+    if (mode !== 'local') clearSession();
   },
 
   recallTiles: () => {

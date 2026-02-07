@@ -1,18 +1,34 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
+import { hasActiveSession, loadSession, clearSession } from '../hooks/sessionPersistence';
 import './HomePage.css';
 
 export function HomePage() {
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState('');
   const [showJoin, setShowJoin] = useState(false);
+  const [showResume, setShowResume] = useState(hasActiveSession);
 
   const handleJoin = () => {
     const code = joinCode.trim().toUpperCase();
     if (code.length >= 3) {
       navigate(`/game?mode=guest&code=${code}`);
     }
+  };
+
+  const handleResume = () => {
+    const session = loadSession();
+    if (!session) {
+      setShowResume(false);
+      return;
+    }
+    navigate(`/game?mode=${session.role}&code=${session.roomCode}`);
+  };
+
+  const handleDismissResume = () => {
+    clearSession();
+    setShowResume(false);
   };
 
   return (
@@ -22,6 +38,17 @@ export function HomePage() {
         <p className="home-subtitle">Word game with a clock</p>
 
         <div className="home-actions">
+          {showResume && (
+            <div className="resume-row">
+              <button className="btn-primary home-btn resume-btn" onClick={handleResume}>
+                Resume Game
+              </button>
+              <button className="btn-dismiss" onClick={handleDismissResume}>
+                Dismiss
+              </button>
+            </div>
+          )}
+
           <button className="btn-primary home-btn" onClick={() => navigate('/game?mode=host')}>
             Play Online
           </button>

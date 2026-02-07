@@ -10,9 +10,8 @@ BlitzTiles is a Scrabble-like word game with blitz-chess style move clocks. It's
 
 ```
 packages/
-  shared/   — Pure game logic + types. No runtime dependencies. Used by both client and server.
+  shared/   — Pure game logic + types. No runtime dependencies. Used by client.
   client/   — React + Vite frontend. Imports from @blitztiles/shared.
-  server/   — PartyKit (Cloudflare Durable Objects) multiplayer server. Imports from @blitztiles/shared.
 ```
 
 ### Tech stack
@@ -20,17 +19,16 @@ packages/
 - **Frontend**: React 18 + TypeScript + Vite
 - **State**: Zustand
 - **Drag-and-drop**: @dnd-kit (touch-first)
-- **Server**: PartyKit (WebSocket rooms on Cloudflare Durable Objects)
-- **Client networking**: partysocket (auto-reconnect WebSocket)
+- **Networking**: PeerJS (WebRTC P2P) — host-to-guest direct connection
 - **Routing**: react-router-dom
 - **Testing**: Vitest
 - **Dictionary**: ENABLE word list (~172K words, public domain)
 
 ### Key design decisions
 
-1. **Server-authoritative**: The server owns ALL game state. Clients send intents (`SUBMIT_MOVE`, `PASS`, `EXCHANGE`), server validates via shared engine, broadcasts results. No client-side game state mutation except optimistic tile placement before submit.
+1. **Host-authoritative**: The host player runs the game engine and owns ALL game state. The guest sends intents (`SUBMIT_MOVE`, `PASS`, `EXCHANGE`), the host validates via shared engine and broadcasts results. No central server required — connections are peer-to-peer via PeerJS/WebRTC.
 
-2. **Shared game engine**: `packages/shared/src/gameEngine.ts` is a pure state machine. Every function takes state + action → returns new state. Used by server for real validation and by client for local hot-seat mode.
+2. **Shared game engine**: `packages/shared/src/gameEngine.ts` is a pure state machine. Every function takes state + action → returns new state. Used by host for real validation and by client for local hot-seat mode.
 
 3. **Per-turn timer**: Each turn gets a fresh 60 seconds (configurable via `turnTimeLimitMs` in `GameConfig`). Auto-passes on expiry (two consecutive auto-passes end the game). In online mode, the host runs `setTimeout` and is authoritative; the guest shows a local countdown only. Client uses `requestAnimationFrame` for smooth wall-clock-based display.
 
@@ -43,7 +41,6 @@ pnpm install              # Install all deps
 pnpm test                 # Run all tests (vitest across all packages)
 pnpm --filter shared test # Run shared package tests only
 pnpm dev                  # Start client dev server (Vite)
-pnpm dev:server           # Start PartyKit dev server
 pnpm build                # Build all packages
 pnpm typecheck            # TypeScript check all packages
 ```
@@ -69,17 +66,8 @@ Key modules:
 React SPA. Pages: HomePage (create/join), GamePage (play). Key hooks:
 
 - `useGameStore.ts` — Zustand store, can drive local hot-seat OR networked play. Includes turn timeout scheduling (`setTimeout` auto-pass for local/host modes).
-- `useGameConnection.ts` — PeerJS WebRTC connection, translates server messages → store updates, message buffering + REQUEST_SYNC
+- `useGameConnection.ts` — PeerJS WebRTC connection, translates host messages → store updates, message buffering + REQUEST_SYNC
 - `useTimer.ts` — `requestAnimationFrame` countdown hook, reads `turnStartTimestamp`/`turnTimeLimitMs` from store, returns `display`, `urgency`, `progress`, `isRunning`
-
-### @blitztiles/server
-
-PartyKit server. Single file `game.ts` is the main Durable Object class:
-
-- `onConnect` — assign player index, start game when 2 connected
-- `onMessage` — validate via shared gameEngine, broadcast filtered state
-- `onClose` — mark disconnected (clock keeps running)
-- `alarm()` — timer expiry
 
 ## Game rules quick reference
 
