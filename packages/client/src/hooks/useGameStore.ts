@@ -110,7 +110,7 @@ let dictionaryPromise: Promise<Trie> | null = null;
 
 export async function getDictionary(): Promise<Trie> {
   if (!dictionaryPromise) {
-    dictionaryPromise = fetch('/enable.dict.bin')
+    dictionaryPromise = fetch(import.meta.env.BASE_URL + 'enable.dict.bin')
       .then((res) => {
         if (!res.ok) throw new Error(`Dictionary fetch failed: ${res.status}`);
         return res.arrayBuffer();
