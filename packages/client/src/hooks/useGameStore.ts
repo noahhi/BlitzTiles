@@ -64,6 +64,8 @@ export interface GameStore {
   lastMoveError: string | null;
   dictionaryLoaded: boolean;
   lastMoveTiles: { row: number; col: number }[];
+  exchangeMode: boolean;
+  exchangeSelection: Set<string>;
 
   // Network state
   mode: GameMode;
@@ -91,6 +93,8 @@ export interface GameStore {
   shuffleHand: () => void;
   reorderHand: (activeId: string, overId: string) => void;
   clearError: () => void;
+  setExchangeMode: (on: boolean) => void;
+  toggleExchangeTile: (tileId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +248,8 @@ const INITIAL_STATE = {
   lastMoveError: null as string | null,
   dictionaryLoaded: false,
   lastMoveTiles: [] as { row: number; col: number }[],
+  exchangeMode: false,
+  exchangeSelection: new Set<string>(),
 
   mode: 'local' as GameMode,
   playerIndex: 0,
@@ -638,6 +644,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       placedTiles: [],
       selectedTileId: null,
       lastMoveError: null,
+      exchangeMode: false,
+      exchangeSelection: new Set(),
     });
 
     if (mode === 'host' && _sendFn) {
@@ -704,5 +712,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   clearError: () => {
     set({ lastMoveError: null });
+  },
+
+  setExchangeMode: (on: boolean) => {
+    if (on) {
+      get().recallTiles();
+      set({ exchangeMode: true, exchangeSelection: new Set() });
+    } else {
+      set({ exchangeMode: false, exchangeSelection: new Set() });
+    }
+  },
+
+  toggleExchangeTile: (tileId: string) => {
+    const prev = get().exchangeSelection;
+    const next = new Set(prev);
+    if (next.has(tileId)) {
+      next.delete(tileId);
+    } else {
+      next.add(tileId);
+    }
+    set({ exchangeSelection: next });
   },
 }));

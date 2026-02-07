@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useGameStore } from '../../hooks/useGameStore';
-import { useScorePreview } from '../../hooks/useScorePreview';
 import './GameControls.css';
 
 export function GameControls() {
@@ -12,15 +11,12 @@ export function GameControls() {
   const lastMoveError = useGameStore((s) => s.lastMoveError);
   const clearError = useGameStore((s) => s.clearError);
   const phase = useGameStore((s) => s.phase);
-  const currentHand = useGameStore((s) => s.currentHand);
   const exchangeTilesAction = useGameStore((s) => s.exchangeTiles);
   const tileBagCount = useGameStore((s) => s.tileBagCount);
   const moveHistory = useGameStore((s) => s.moveHistory);
-
-  const preview = useScorePreview();
-
-  const [exchangeMode, setExchangeMode] = useState(false);
-  const [exchangeSelection, setExchangeSelection] = useState<Set<string>>(new Set());
+  const exchangeMode = useGameStore((s) => s.exchangeMode);
+  const exchangeSelection = useGameStore((s) => s.exchangeSelection);
+  const setExchangeMode = useGameStore((s) => s.setExchangeMode);
 
   // Track which popup has been dismissed via onAnimationEnd
   const [dismissedAt, setDismissedAt] = useState(0);
@@ -40,32 +36,13 @@ export function GameControls() {
   const hasPlacedTiles = placedTiles.length > 0;
 
   const handleExchangeToggle = () => {
-    if (exchangeMode) {
-      setExchangeMode(false);
-      setExchangeSelection(new Set());
-    } else {
-      recallTiles();
-      setExchangeMode(true);
-      setExchangeSelection(new Set());
-    }
+    setExchangeMode(!exchangeMode);
   };
 
   const handleExchangeConfirm = () => {
     if (exchangeSelection.size > 0) {
       exchangeTilesAction(Array.from(exchangeSelection));
-      setExchangeMode(false);
-      setExchangeSelection(new Set());
     }
-  };
-
-  const toggleExchangeTile = (tileId: string) => {
-    const newSet = new Set(exchangeSelection);
-    if (newSet.has(tileId)) {
-      newSet.delete(tileId);
-    } else {
-      newSet.add(tileId);
-    }
-    setExchangeSelection(newSet);
   };
 
   return (
@@ -87,19 +64,7 @@ export function GameControls() {
 
       {exchangeMode ? (
         <div className="exchange-mode">
-          <div className="exchange-prompt">Tap tiles to exchange:</div>
-          <div className="exchange-tiles">
-            {currentHand.map((tile) => (
-              <div
-                key={tile.id}
-                className={`exchange-tile ${exchangeSelection.has(tile.id) ? 'selected' : ''}`}
-                onClick={() => toggleExchangeTile(tile.id)}
-              >
-                <span>{tile.isBlank ? '?' : tile.letter}</span>
-                {tile.value > 0 && <span className="ex-tile-val">{tile.value}</span>}
-              </div>
-            ))}
-          </div>
+          <div className="exchange-prompt">Tap tiles to exchange</div>
           <div className="exchange-actions">
             <button className="btn-secondary" onClick={handleExchangeToggle}>
               Cancel
@@ -134,7 +99,7 @@ export function GameControls() {
             Pass
           </button>
           <button className="btn-primary" onClick={submitMoveAction} disabled={!hasPlacedTiles}>
-            Submit{preview.score !== null ? ` (+${preview.score})` : ''}
+            Submit
           </button>
         </div>
       )}

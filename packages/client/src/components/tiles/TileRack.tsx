@@ -18,15 +18,27 @@ function RackTile({ tile }: { tile: Tile }) {
   };
 
   const placedTiles = useGameStore((s) => s.placedTiles);
+  const exchangeMode = useGameStore((s) => s.exchangeMode);
+  const exchangeSelection = useGameStore((s) => s.exchangeSelection);
+  const toggleExchangeTile = useGameStore((s) => s.toggleExchangeTile);
   const isPlaced = placedTiles.some((t) => t.id === tile.id);
+  const isExchangeSelected = exchangeMode && exchangeSelection.has(tile.id);
+
+  const handleClick = exchangeMode
+    ? (e: React.MouseEvent) => {
+        e.stopPropagation();
+        toggleExchangeTile(tile.id);
+      }
+    : undefined;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
-      className={`rack-tile ${isDragging ? 'dragging' : ''} ${isPlaced ? 'placed' : ''}`}
+      {...(exchangeMode ? {} : listeners)}
+      {...(exchangeMode ? {} : attributes)}
+      className={`rack-tile ${isDragging ? 'dragging' : ''} ${isPlaced ? 'placed' : ''} ${isExchangeSelected ? 'exchange-selected' : ''}`}
+      onClick={handleClick}
     >
       <span className="rack-tile-letter">{tile.isBlank ? '' : tile.letter}</span>
       {tile.value > 0 && <span className="rack-tile-value">{tile.value}</span>}
