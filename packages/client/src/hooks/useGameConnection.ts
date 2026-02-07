@@ -12,6 +12,8 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import Peer, { DataConnection } from 'peerjs';
+import { getDictionary } from './useGameStore';
+import { generateRoomCode } from '@blitztiles/shared';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,14 +23,7 @@ function roomCodeToPeerId(code: string): string {
   return `blitztiles-${code.toUpperCase()}`;
 }
 
-export function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // letters only, no I/O
-  let code = '';
-  for (let i = 0; i < 5; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
+export { generateRoomCode } from '@blitztiles/shared';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -215,40 +210,55 @@ export function useGameConnection(
 
     // --- Setup ---
     if (role === 'host') {
-      const code = recoveryCode || generateRoomCode();
-      const peerId = roomCodeToPeerId(code);
-
-      setState({ status: 'connecting', roomCode: code, error: null });
-
-      const peer = new Peer(peerId);
-      peerRef.current = peer;
-
-      peer.on('open', () => {
+      function setupHost(code: string) {
         if (destroyedRef.current) return;
-        setState({ status: 'waiting', roomCode: code, error: null });
-      });
+        const peerId = roomCodeToPeerId(code);
 
-      peer.on('connection', (connection) => {
-        if (destroyedRef.current) return;
-        // Close old connection if any
-        if (connRef.current && connRef.current !== connection) {
-          try {
-            connRef.current.close();
-          } catch {
-            // ignore
+        setState({ status: 'connecting', roomCode: code, error: null });
+
+        const peer = new Peer(peerId);
+        peerRef.current = peer;
+
+        peer.on('open', () => {
+          if (destroyedRef.current) return;
+          setState({ status: 'waiting', roomCode: code, error: null });
+        });
+
+        peer.on('connection', (connection) => {
+          if (destroyedRef.current) return;
+          // Close old connection if any
+          if (connRef.current && connRef.current !== connection) {
+            try {
+              connRef.current.close();
+            } catch {
+              // ignore
+            }
           }
-        }
-        clearHostTimeout();
-        connRef.current = connection;
-        setupDataChannel(connection);
-      });
+          clearHostTimeout();
+          connRef.current = connection;
+          setupDataChannel(connection);
+        });
 
-      peer.on('error', (err) => {
-        if (destroyedRef.current) return;
-        // If the peer ID is taken (host recovery race condition), it may mean
-        // our old peer hasn't been cleaned up yet. Surface as error.
-        setState({ status: 'error', roomCode: code, error: err.message });
-      });
+        peer.on('error', (err) => {
+          if (destroyedRef.current) return;
+          // If the peer ID is taken (host recovery race condition), it may mean
+          // our old peer hasn't been cleaned up yet. Surface as error.
+          setState({ status: 'error', roomCode: code, error: err.message });
+        });
+      }
+
+      if (recoveryCode) {
+        setupHost(recoveryCode);
+      } else {
+        // Load dictionary and pick a word as the room code
+        getDictionary()
+          .then((trie) => {
+            setupHost(generateRoomCode(trie));
+          })
+          .catch(() => {
+            setupHost(generateRoomCode());
+          });
+      }
     } else if (role === 'guest') {
       const codeToUse = joinCode || recoveryCode || '';
       const hostPeerId = roomCodeToPeerId(codeToUse);

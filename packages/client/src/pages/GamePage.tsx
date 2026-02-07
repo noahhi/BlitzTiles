@@ -470,7 +470,8 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
 function LobbyShare({ roomCode }: { roomCode: string }) {
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = `${window.location.origin}/game?mode=guest&code=${roomCode}`;
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const shareUrl = `${window.location.origin}${base}/game?mode=guest&code=${roomCode}`;
 
   const handleCopy = async () => {
     try {
