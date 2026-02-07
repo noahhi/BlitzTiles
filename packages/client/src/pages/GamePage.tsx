@@ -15,11 +15,14 @@ import { GameBoard } from '../components/board/GameBoard';
 import { TileRack } from '../components/tiles/TileRack';
 import { GameHeader } from '../components/game/GameHeader';
 import { GameControls } from '../components/game/GameControls';
+import { RacingControls } from '../components/game/RacingControls';
 import { GameOverModal } from '../components/game/GameOverModal';
 import { BlankTilePicker } from '../components/tiles/BlankTilePicker';
 import { LandscapeWarning } from '../components/game/LandscapeWarning';
 import { TurnBanner } from '../components/game/TurnBanner';
 import { QRCodeSVG } from 'qrcode.react';
+import type { GameConfig } from '@blitztiles/shared';
+import { DEFAULT_GAME_CONFIG, DEFAULT_RACING_ROUND_TIME_LIMIT_MS } from '@blitztiles/shared';
 import { useGameStore, filterStateForPlayer } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
 import { useWakeLock } from '../hooks/useWakeLock';
@@ -40,9 +43,10 @@ export function GamePage() {
   const [searchParams] = useSearchParams();
   const gameMode = searchParams.get('mode') as 'host' | 'guest' | null;
   const joinCode = searchParams.get('code') || '';
+  const variant = searchParams.get('variant') as 'racing' | null;
 
   if (gameMode === 'host' || gameMode === 'guest') {
-    return <OnlineGame role={gameMode} joinCode={joinCode} />;
+    return <OnlineGame role={gameMode} joinCode={joinCode} variant={variant} />;
   }
 
   return <LocalGame />;
@@ -190,7 +194,15 @@ function LocalGame() {
 // Online game (host or guest via WebRTC)
 // ---------------------------------------------------------------------------
 
-function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: string }) {
+function OnlineGame({
+  role,
+  joinCode,
+  variant,
+}: {
+  role: 'host' | 'guest';
+  joinCode: string;
+  variant: 'racing' | null;
+}) {
   const navigate = useNavigate();
 
   // Check for saved session to determine if this is a recovery
@@ -221,6 +233,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
   const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const reorderHand = useGameStore((s) => s.reorderHand);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
+  const gameVariant = useGameStore((s) => s.gameVariant);
 
   useWakeLock(phase === 'playing');
 
@@ -294,7 +307,15 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
     // Fresh game init (no recovery)
     const roomCode = connection.roomCode || '';
     if (role === 'host') {
-      initHostGame(roomCode).then(() => setInitialized(true));
+      const config: GameConfig | undefined =
+        variant === 'racing'
+          ? {
+              ...DEFAULT_GAME_CONFIG,
+              gameVariant: 'racing',
+              racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
+            }
+          : undefined;
+      initHostGame(roomCode, config).then(() => setInitialized(true));
     } else {
       initGuestGame(roomCode).then(() => {
         setInitialized(true);
@@ -429,7 +450,7 @@ function OnlineGame({ role, joinCode }: { role: 'host' | 'guest'; joinCode: stri
         <GameBoard isDragging={activeTileId !== null} />
         <div className="game-bottom">
           <TileRack />
-          <GameControls />
+          {gameVariant === 'racing' ? <RacingControls /> : <GameControls />}
         </div>
         <GameOverModal />
 

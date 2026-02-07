@@ -58,6 +58,13 @@ export function HomePage() {
             Play Online
           </button>
 
+          <button
+            className="btn-primary home-btn"
+            onClick={() => navigate('/game?mode=host&variant=racing')}
+          >
+            Racing Mode
+          </button>
+
           {!showJoin ? (
             <button className="btn-secondary home-btn" onClick={() => setShowJoin(true)}>
               Join Game
