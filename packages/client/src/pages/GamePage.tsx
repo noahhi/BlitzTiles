@@ -26,6 +26,7 @@ import { useWakeLock } from '../hooks/useWakeLock';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { loadSession, clearSession } from '../hooks/sessionPersistence';
 import type { PersistedSession } from '../hooks/sessionPersistence';
+import type { Tile } from '@blitztiles/shared';
 import './GamePage.css';
 
 /**
@@ -234,6 +235,8 @@ function OnlineGame({
   const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const reorderHand = useGameStore((s) => s.reorderHand);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
+  const spectatorPlayers = useGameStore((s) => s.players);
+  const spectatorConfig = useGameStore((s) => s.config);
 
   useWakeLock(phase === 'playing');
   useKeyboardControls(!isSpectator); // Disable keyboard controls for spectators
@@ -483,6 +486,14 @@ function OnlineGame({
   }
 
   if (isSpectator) {
+    // Check if spectator can see hands
+    const canSeeHands = spectatorConfig.spectatorHandsVisible ?? false;
+
+    // Get hands from players if available (only present if spectatorHandsVisible is true)
+    type PlayerWithOptionalHand = (typeof spectatorPlayers)[0] & { hand?: Tile[] };
+    const player0Hand = (spectatorPlayers[0] as PlayerWithOptionalHand).hand || null;
+    const player1Hand = (spectatorPlayers[1] as PlayerWithOptionalHand).hand || null;
+
     return (
       <>
         <LandscapeWarning />
@@ -490,6 +501,44 @@ function OnlineGame({
           <TurnBanner />
           <GameHeader isSpectator={true} />
           <GameBoard isDragging={false} />
+
+          {canSeeHands && (player0Hand || player1Hand) && (
+            <div className="spectator-hands">
+              <div className="spectator-hand-row">
+                <div className="spectator-hand-label">{spectatorPlayers[0].name}'s tiles:</div>
+                <div className="spectator-hand-tiles">
+                  {player0Hand &&
+                    player0Hand.map((tile) => (
+                      <div key={tile.id} className="spectator-tile">
+                        <span className="spectator-tile-letter">
+                          {tile.isBlank ? '?' : tile.letter}
+                        </span>
+                        {tile.value > 0 && (
+                          <span className="spectator-tile-value">{tile.value}</span>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+              <div className="spectator-hand-row">
+                <div className="spectator-hand-label">{spectatorPlayers[1].name}'s tiles:</div>
+                <div className="spectator-hand-tiles">
+                  {player1Hand &&
+                    player1Hand.map((tile) => (
+                      <div key={tile.id} className="spectator-tile">
+                        <span className="spectator-tile-letter">
+                          {tile.isBlank ? '?' : tile.letter}
+                        </span>
+                        {tile.value > 0 && (
+                          <span className="spectator-tile-value">{tile.value}</span>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {phase === 'finished' && <GameOverModal />}
 
           {connection.status === 'reconnecting' && (

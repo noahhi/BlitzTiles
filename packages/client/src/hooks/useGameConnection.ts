@@ -238,79 +238,55 @@ export function useGameConnection(
         peer.on('connection', (connection) => {
           if (destroyedRef.current) return;
 
-          // Don't immediately decide if guest or spectator
-          // Wait for first message to determine role
-          let connectionType: 'guest' | 'spectator' | null = null;
-          let dataHandlerSetup = false;
+          // Set up data channel immediately for all connections
+          setupDataChannel(connection);
 
-          const handleData = (data: unknown) => {
-            if (connectionType === null && !dataHandlerSetup) {
-              // First message - determine role
-              const msg = data as { type?: string };
-              if (msg && msg.type === 'SPECTATE_JOIN') {
-                connectionType = 'spectator';
-                spectatorConnsRef.current.push(connection);
+          // Track role assignment
+          let roleAssigned = false;
 
-                // Set up spectator-specific handlers
-                connection.on('close', () => {
-                  if (destroyedRef.current) return;
-                  spectatorConnsRef.current = spectatorConnsRef.current.filter(
-                    (c) => c !== connection,
-                  );
-                  onSpectatorDisconnectedRef.current?.(connection);
-                });
+          // Listen for first message to determine role
+          const handleFirstMessage = (data: unknown) => {
+            if (roleAssigned) return;
+            roleAssigned = true;
 
-                // Notify store about new spectator
-                onSpectatorConnectedRef.current?.(connection);
+            const msg = data as { type?: string };
+            if (msg && msg.type === 'SPECTATE_JOIN') {
+              // This is a spectator
+              spectatorConnsRef.current.push(connection);
 
-                // Forward the SPECTATE_JOIN message to the store
-                if (onMessageRef.current) {
-                  onMessageRef.current(data);
-                }
-              } else {
-                // Any other message type = guest (player)
-                connectionType = 'guest';
+              // Remove from guest connection if it was set
+              if (connRef.current === connection) {
+                connRef.current = null;
+              }
 
-                // Close old guest connection if any
-                if (connRef.current && connRef.current !== connection) {
-                  try {
-                    connRef.current.close();
-                  } catch {
-                    // ignore
-                  }
-                }
-                clearHostTimeout();
-                connRef.current = connection;
+              // Set up spectator-specific close handler
+              connection.on('close', () => {
+                if (destroyedRef.current) return;
+                spectatorConnsRef.current = spectatorConnsRef.current.filter(
+                  (c) => c !== connection,
+                );
+                onSpectatorDisconnectedRef.current?.(connection);
+              });
 
-                // Set up guest handlers
-                setupDataChannel(connection);
-
-                // If connection is already open, manually trigger connected state
-                if (connection.open) {
-                  clearRetryTimer();
-                  clearHostTimeout();
-                  hadConnectionRef.current = true;
-                  setState((prev) => ({ ...prev, status: 'connected' }));
-                  onConnectedRef.current?.();
+              // Notify about new spectator
+              onSpectatorConnectedRef.current?.(connection);
+            } else {
+              // This is the guest (player 2)
+              // Close old guest connection if any
+              if (connRef.current && connRef.current !== connection) {
+                try {
+                  connRef.current.close();
+                } catch {
+                  // ignore
                 }
               }
-              dataHandlerSetup = true;
-            }
-
-            // Forward all messages to message handler (including the first one)
-            if (onMessageRef.current) {
-              onMessageRef.current(data);
-            } else {
-              messageQueueRef.current.push(data);
+              clearHostTimeout();
+              connRef.current = connection;
             }
           };
 
-          connection.on('data', handleData);
-
-          connection.on('error', (err) => {
-            if (destroyedRef.current) return;
-            console.warn('[BlitzTiles] Connection error:', err.message);
-          });
+          // Add our role detector alongside existing handlers
+          connection.on('data', handleFirstMessage);
         });
 
         peer.on('error', (err) => {

@@ -288,3 +288,16 @@
   color: var(--text);
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* In-game spectator settings */
+.spectator-settings-ingame {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.spectator-settings-ingame h4 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: var(--text);
+}

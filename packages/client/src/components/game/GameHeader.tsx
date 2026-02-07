@@ -39,8 +39,14 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
   const phase = useGameStore((s) => s.phase);
   const mode = useGameStore((s) => s.mode);
   const playerIndex = useGameStore((s) => s.playerIndex);
+  const config = useGameStore((s) => s.config);
+  const updateConfig = useGameStore((s) => s.updateConfig);
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
+
+  const toggleSpectatorHands = () => {
+    updateConfig({ spectatorHandsVisible: !config.spectatorHandsVisible });
+  };
 
   if (players.length < 2) return null;
 
@@ -125,6 +131,19 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
               </button>
             </div>
             <SettingsPanel />
+            {mode === 'host' && (
+              <div className="spectator-settings-ingame">
+                <h4>Spectators</h4>
+                <label className="spectator-toggle">
+                  <input
+                    type="checkbox"
+                    checked={config.spectatorHandsVisible ?? false}
+                    onChange={() => toggleSpectatorHands()}
+                  />
+                  <span>Show player hands to spectators</span>
+                </label>
+              </div>
+            )}
           </div>
         </div>
       )}
