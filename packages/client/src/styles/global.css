@@ -38,6 +38,17 @@
   box-sizing: border-box;
 }
 
+/* Add smooth transitions for theme switching */
+html,
+body,
+button,
+input {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
 html,
 body {
   height: 100%;
@@ -100,4 +111,44 @@ button:disabled {
 
 .btn-secondary:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* Light theme palette */
+[data-theme='light'] {
+  /* Backgrounds */
+  --bg: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --bg-card: #fafafa;
+
+  /* Text */
+  --text: #1d1d1f;
+  --text-muted: #6e6e73;
+
+  /* Accent */
+  --accent: #9966cc;
+  --accent-hover: #7744aa;
+
+  /* Tiles (dark on light - classic Scrabble) */
+  --tile-bg: #2c2c2c;
+  --tile-text: #f5f5f5;
+  --tile-border: #1a1a1a;
+  --tile-selected: #9966cc;
+
+  /* Board (warm wood tones) */
+  --board-bg: #dcd4c8;
+  --board-border: #b8afa0;
+  --cell-bg: #e8e3d8;
+  --cell-border: #d0c9bc;
+
+  /* Bonus squares (brighter for visibility) */
+  --dl: #87ceeb; /* Sky blue */
+  --tl: #6a5acd; /* Slate blue */
+  --dw: #f0e68c; /* Khaki yellow */
+  --tw: #dc143c; /* Crimson red */
+  --center: #ffa500; /* Orange */
+
+  /* Status colors (darker for contrast) */
+  --success: #00a86b;
+  --warning: #ff8c00;
+  --danger: #c41e3a;
 }

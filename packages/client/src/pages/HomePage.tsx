@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { hasActiveSession, loadSession, clearSession } from '../hooks/sessionPersistence';
+import { useTheme } from '../hooks/useTheme';
 import './HomePage.css';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [joinCode, setJoinCode] = useState('');
   const [showJoin, setShowJoin] = useState(false);
   const [showResume, setShowResume] = useState(hasActiveSession);
@@ -33,6 +35,9 @@ export function HomePage() {
 
   return (
     <div className="home-page">
+      <button className="theme-toggle-icon" onClick={toggleTheme} aria-label="Toggle theme">
+        {theme === 'dark' ? '☀️' : '🌙'}
+      </button>
       <div className="home-content">
         <h1 className="home-title">BlitzTiles</h1>
         <p className="home-subtitle">Word game with a clock</p>

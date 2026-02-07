@@ -64,3 +64,33 @@
 .toggle-switch.on .toggle-knob {
   transform: translateX(18px);
 }
+
+/* Theme toggle */
+.theme-toggle {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.theme-option {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-weight: 500;
+}
+
+.theme-option.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.theme-option:hover:not(.active) {
+  background: rgba(128, 128, 128, 0.1);
+  border-color: rgba(128, 128, 128, 0.3);
+}
