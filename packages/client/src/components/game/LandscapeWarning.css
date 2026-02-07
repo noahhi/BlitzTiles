@@ -1,0 +1,23 @@
+.landscape-warning {
+  display: none;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .landscape-warning {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: var(--bg);
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .rotate-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
+}
