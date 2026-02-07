@@ -30,17 +30,56 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
     col: number;
   } | null>(null);
 
-  // Compute which cell gets the score badge (last tile of the word)
+  // Compute the full word being formed (including existing board tiles)
+  // so the highlight outline encompasses the entire word, not just placed tiles
+  const wordSet = (() => {
+    if (placedTiles.length === 0 || board.length === 0) return pendingSet;
+
+    const hasTile = (r: number, c: number) => board[r]?.[c]?.tile || pendingSet.has(`${r},${c}`);
+
+    const rows = placedTiles.map((t) => t.row);
+    const cols = placedTiles.map((t) => t.col);
+    const cells = new Set<string>();
+
+    // Horizontal word
+    if (new Set(rows).size === 1) {
+      const row = rows[0];
+      let minCol = Math.min(...cols);
+      let maxCol = Math.max(...cols);
+      while (minCol > 0 && hasTile(row, minCol - 1)) minCol--;
+      while (maxCol < 14 && hasTile(row, maxCol + 1)) maxCol++;
+      for (let c = minCol; c <= maxCol; c++) cells.add(`${row},${c}`);
+    }
+
+    // Vertical word
+    if (new Set(cols).size === 1) {
+      const col = cols[0];
+      let minRow = Math.min(...rows);
+      let maxRow = Math.max(...rows);
+      while (minRow > 0 && hasTile(minRow - 1, col)) minRow--;
+      while (maxRow < 14 && hasTile(maxRow + 1, col)) maxRow++;
+      for (let r = minRow; r <= maxRow; r++) cells.add(`${r},${col}`);
+    }
+
+    return cells.size > 0 ? cells : pendingSet;
+  })();
+
+  // Score badge goes on the last cell of the word
   const scoreBadgeCell =
     preview.score !== null && placedTiles.length > 0
       ? (() => {
           const rows = placedTiles.map((t) => t.row);
           const cols = placedTiles.map((t) => t.col);
           const isHorizontal = new Set(rows).size === 1;
-          return {
-            row: isHorizontal ? rows[0] : Math.max(...rows),
-            col: isHorizontal ? Math.max(...cols) : cols[0],
-          };
+          // Use wordSet to find the actual end of the full word
+          let endRow = isHorizontal ? rows[0] : Math.max(...rows);
+          let endCol = isHorizontal ? Math.max(...cols) : cols[0];
+          if (isHorizontal) {
+            while (wordSet.has(`${endRow},${endCol + 1}`)) endCol++;
+          } else {
+            while (wordSet.has(`${endRow + 1},${endCol}`)) endRow++;
+          }
+          return { row: endRow, col: endCol };
         })()
       : null;
 
@@ -81,7 +120,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
       >
         {board.map((row, rowIdx) =>
           row.map((cell, colIdx) => {
-            const isPending = pendingSet.has(`${rowIdx},${colIdx}`);
+            const isInWord = wordSet.has(`${rowIdx},${colIdx}`);
             const isLastMove = lastMoveSet.has(`${rowIdx},${colIdx}`);
             return (
               <BoardCell
@@ -91,12 +130,12 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
                 isSelected={false}
                 isLastMove={isLastMove}
                 pendingEdges={
-                  isPending
+                  isInWord
                     ? {
-                        top: !pendingSet.has(`${rowIdx - 1},${colIdx}`),
-                        bottom: !pendingSet.has(`${rowIdx + 1},${colIdx}`),
-                        left: !pendingSet.has(`${rowIdx},${colIdx - 1}`),
-                        right: !pendingSet.has(`${rowIdx},${colIdx + 1}`),
+                        top: !wordSet.has(`${rowIdx - 1},${colIdx}`),
+                        bottom: !wordSet.has(`${rowIdx + 1},${colIdx}`),
+                        left: !wordSet.has(`${rowIdx},${colIdx - 1}`),
+                        right: !wordSet.has(`${rowIdx},${colIdx + 1}`),
                       }
                     : undefined
                 }
