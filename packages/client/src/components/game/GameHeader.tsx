@@ -107,7 +107,7 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
 
   return (
     <div className="game-header">
-      <button className="leave-btn" onClick={handleLeave} title="Back to menu">
+      <button className="back-btn" onClick={handleLeave} title="Back to menu">
         &#x2190;
       </button>
       <div
