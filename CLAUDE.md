@@ -34,6 +34,12 @@ packages/
 
 4. **Client networking**: PeerJS (WebRTC) for P2P multiplayer with message buffering and REQUEST_SYNC for state reconciliation.
 
+5. **Racing mode**: Simultaneous-play variant where both players see the same shared rack and race to submit a valid word first. Round-based with 30s timeouts. Two consecutive skipped rounds end the game. Engine in `racingEngine.ts`.
+
+6. **Spectator mode**: Read-only observers join via spectator link. Host controls hand visibility via `spectatorHandsVisible` config. Spectators see ghost tiles (live placement previews from active players). Multiple simultaneous spectators supported.
+
+7. **Store modularity**: `useGameStore` refactored into focused modules (`storeTypes`, `stateSync`, `broadcast`, `turnTimeout`, `hostMessageHandler`, `guestMessageHandler`, `spectatorMessageHandler`) to reduce merge conflicts and keep each concern isolated.
+
 ## Commands
 
 ```bash
@@ -53,20 +59,31 @@ Pure TypeScript, zero dependencies. All exports from `packages/shared/src/index.
 
 Key modules:
 
-- `types.ts` — All TypeScript types: Tile, GameState, PlayerState, ClientMessage/ServerMessage unions
+- `types.ts` — All TypeScript types: Tile, GameState, PlayerState, GameVariant, SpectatorGameState, ClientMessage/ServerMessage unions
 - `constants.ts` — Tile distribution (100 tiles), 15×15 bonus square map, game defaults
 - `tileBag.ts` — createTileBag(), drawTiles(), exchangeTiles() — all take+return a PRNG seed for determinism
 - `words.ts` — Trie class for O(k) word lookup, loadDictionary() parser
 - `board.ts` — isValidPlacement(), getFormedWords() — pure functions over board 2D array
 - `scoring.ts` — scoreTurn() with DL/TL/DW/TW bonuses, 50-point all-tiles bonus
 - `gameEngine.ts` — createGame(), submitMove(), passTurn(), exchangeTiles(), handleTurnTimeout(), checkEndConditions()
+- `racingEngine.ts` — createRacingGame(), submitRacingMove(), handleRacingRoundTimeout(), checkRacingEndConditions()
 
 ### @blitztiles/client
 
-React SPA. Pages: HomePage (create/join), GamePage (play). Key hooks:
+React SPA. Pages: HomePage (create/join/spectate), GamePage (play). All hooks in `src/hooks/`.
 
-- `useGameStore.ts` — Zustand store, can drive local hot-seat OR networked play. Includes turn timeout scheduling (`setTimeout` auto-pass for local/host modes).
-- `useGameConnection.ts` — PeerJS WebRTC connection, translates host messages → store updates, message buffering + REQUEST_SYNC
+Key files:
+
+- `useGameStore.ts` — Zustand store orchestrator. Supports 4 modes: local, host, guest, spectator. Imports from modular helpers below.
+- `storeTypes.ts` — `GameMode` type (`'local' | 'host' | 'guest' | 'spectator'`), `GameStore` interface, `INITIAL_STATE`
+- `stateSync.ts` — `syncFromGameState()`, `syncFromClientGameState()`, `syncFromSpectatorGameState()`, `filterStateForPlayer()`, `filterStateForSpectator()`
+- `broadcast.ts` — `broadcastToSpectators()`, `broadcastGhostTilesToSpectators()`, `persistGameSession()`, `clearSession()`
+- `turnTimeout.ts` — `scheduleTurnTimeout()`, `scheduleRacingRoundTimeout()`, `clearTurnTimeout()` — module-level timers
+- `hostMessageHandler.ts` — Processes guest intents through game engine, broadcasts results to guests and spectators
+- `guestMessageHandler.ts` — Receives state updates from host, syncs local store
+- `spectatorMessageHandler.ts` — Receives read-only state + ghost tiles from host
+- `sessionPersistence.ts` — localStorage session save/load/clear for reconnection (host saves full state, guest saves filtered)
+- `useGameConnection.ts` — PeerJS WebRTC connection for host/guest/spectator roles, message buffering, reconnection, REQUEST_SYNC
 - `useTimer.ts` — `requestAnimationFrame` countdown hook, reads `turnStartTimestamp`/`turnTimeLimitMs` from store, returns `display`, `urgency`, `progress`, `isRunning`
 
 ## Game rules quick reference
@@ -80,6 +97,7 @@ React SPA. Pages: HomePage (create/join), GamePage (play). Key hooks:
 - 50-point bonus for using all 7 tiles in one turn
 - Per-turn timer: 60 seconds per turn (default), auto-pass on expiry
 - Game ends when: bag empty + player plays last tile, two consecutive passes, timer expires, or resignation
+- **Racing mode**: shared rack visible to both players, first valid submission wins the round, 30s round timer, two consecutive skipped rounds ends game, bag empty + rack empty ends game
 
 ## Conventions
 
@@ -89,6 +107,15 @@ React SPA. Pages: HomePage (create/join), GamePage (play). Key hooks:
 - Discriminated unions for all message types (tagged with `type` field)
 - Board coordinates: row 0–14 (top to bottom), col 0–14 (left to right)
 - Center square is (7, 7)
+
+## Documentation maintenance
+
+When making code changes that affect architecture, types, game rules, or module structure, **you must update the relevant documentation files**:
+
+- `CLAUDE.md` — project-level docs (key design decisions, package details, game rules, conventions)
+- Auto memory files (`MEMORY.md`, `architecture.md`, `patterns.md`) — quick reference, architecture details, patterns and gotchas
+
+Examples of changes that require doc updates: adding new types/exports to shared, adding new store modules or hooks, changing game rules or modes, adding new message types, modifying GameConfig fields.
 
 ## Commit strategy
 
