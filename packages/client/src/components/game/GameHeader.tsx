@@ -107,7 +107,6 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
 
   return (
     <div className="game-header">
-      <TimerDisplay isSpectator={isSpectator} />
       <button className="leave-btn" onClick={handleLeave} title="Back to menu">
         &#x2190;
       </button>
