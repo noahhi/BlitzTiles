@@ -21,6 +21,9 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __DEV_LAN_IP__: JSON.stringify(getLanAddress()),
+    __DEV_MODE__: JSON.stringify(
+      process.env.VERCEL_ENV === 'preview' || process.env.NODE_ENV !== 'production',
+    ),
   },
   server: {
     port: 5173,

@@ -83,6 +83,8 @@ export interface GameConfig {
   overtimePenaltyPerMinute: number;
   /** Time limit per turn in ms. Only used when timerMode is 'per_turn'. */
   turnTimeLimitMs: number;
+  /** Whether spectators can see player hands. Defaults to false. */
+  spectatorHandsVisible?: boolean;
   /** Game variant: 'classic' (turn-based) or 'racing' (simultaneous). */
   gameVariant: GameVariant;
   /** Time limit per round in racing mode (ms). */
@@ -148,6 +150,8 @@ export type ClientMessage =
   | { type: 'RESIGN' }
   | { type: 'REMATCH' }
   | { type: 'SET_NAME'; name: string }
+  | { type: 'REQUEST_SYNC' }
+  | { type: 'SPECTATE_JOIN' }
   | { type: 'PLACEMENT_UPDATE'; tiles: PlacedTile[] };
 
 // ---------------------------------------------------------------------------
@@ -186,8 +190,43 @@ export interface ClientGameState {
   roundStartTimestamp: string | null;
 }
 
+/** Filtered view of GameState for spectators. */
+export interface SpectatorGameState {
+  roomId: string;
+  phase: GamePhase;
+  config: GameConfig;
+  board: Board;
+  players: [
+    {
+      name: string;
+      score: number;
+      timeRemainingMs: number;
+      handSize: number;
+      connected: boolean;
+      hand?: Tile[];
+    },
+    {
+      name: string;
+      score: number;
+      timeRemainingMs: number;
+      handSize: number;
+      connected: boolean;
+      hand?: Tile[];
+    },
+  ];
+  currentPlayerIndex: number;
+  tileBagCount: number;
+  consecutivePasses: number;
+  turnStartTimestamp: string;
+  winnerIndex: number | null;
+  endReason: string | null;
+  moveHistory: MoveRecord[];
+  stateVersion: number;
+  lastMoveTiles: { row: number; col: number }[];
+}
+
 export type ServerMessage =
-  | { type: 'GAME_STATE'; state: ClientGameState }
+  | { type: 'GAME_STATE'; state: ClientGameState | SpectatorGameState }
   | { type: 'WAITING'; roomId: string; playerIndex: number }
   | { type: 'MOVE_REJECTED'; reason: string }
   | { type: 'TIMER_SYNC'; yourTimeMs: number; opponentTimeMs: number; turnStartTimestamp: string }

@@ -288,3 +288,34 @@
   color: var(--text);
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* In-game spectator settings */
+.spectator-settings-ingame {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.spectator-settings-ingame h4 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.btn-copy-spectate {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.btn-copy-spectate:hover {
+  background: var(--bg-secondary);
+}

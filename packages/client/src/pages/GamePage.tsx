@@ -9,7 +9,7 @@ import {
   useSensors,
   closestCenter,
 } from '@dnd-kit/core';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { GameBoard } from '../components/board/GameBoard';
 import { TileRack } from '../components/tiles/TileRack';
@@ -23,13 +23,19 @@ import { TurnBanner } from '../components/game/TurnBanner';
 import { QRCodeSVG } from 'qrcode.react';
 import type { GameConfig } from '@blitztiles/shared';
 import { DEFAULT_GAME_CONFIG, DEFAULT_RACING_ROUND_TIME_LIMIT_MS } from '@blitztiles/shared';
-import { useGameStore, filterStateForPlayer } from '../hooks/useGameStore';
+import { useGameStore, filterStateForPlayer, getDictionary } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
 import { loadSession, clearSession } from '../hooks/sessionPersistence';
 import type { PersistedSession } from '../hooks/sessionPersistence';
+import type { Tile } from '@blitztiles/shared';
 import './GamePage.css';
+
+// Eagerly start loading the dictionary as soon as this module is imported.
+// This way the fetch + decompress runs in parallel with PeerJS connection setup,
+// instead of waiting until initGuestGame/initHostGame is called.
+getDictionary().catch(() => {});
 
 /**
  * Resolves tile ID from drag-and-drop events.
@@ -42,11 +48,11 @@ function resolveTileId(rawId: string | number): string {
 
 export function GamePage() {
   const [searchParams] = useSearchParams();
-  const gameMode = searchParams.get('mode') as 'host' | 'guest' | null;
+  const gameMode = searchParams.get('mode') as 'host' | 'guest' | 'spectator' | null;
   const joinCode = searchParams.get('code') || '';
   const variant = searchParams.get('variant') as 'racing' | null;
 
-  if (gameMode === 'host' || gameMode === 'guest') {
+  if (gameMode === 'host' || gameMode === 'guest' || gameMode === 'spectator') {
     return <OnlineGame role={gameMode} joinCode={joinCode} variant={variant} />;
   }
 
@@ -201,11 +207,12 @@ function OnlineGame({
   joinCode,
   variant,
 }: {
-  role: 'host' | 'guest';
+  role: 'host' | 'guest' | 'spectator';
   joinCode: string;
   variant: 'racing' | null;
 }) {
   const navigate = useNavigate();
+  const isSpectator = role === 'spectator';
 
   // Check for saved session to determine if this is a recovery
   const [recovery] = useState<PersistedSession | null>(() => {
@@ -218,7 +225,7 @@ function OnlineGame({
 
   const connection = useGameConnection(
     role,
-    role === 'guest' ? joinCode || recoveryCode : undefined,
+    role === 'guest' || role === 'spectator' ? joinCode || recoveryCode : undefined,
     recoveryCode,
   );
 
@@ -226,24 +233,35 @@ function OnlineGame({
   const dictionaryLoaded = useGameStore((s) => s.dictionaryLoaded);
   const initHostGame = useGameStore((s) => s.initHostGame);
   const initGuestGame = useGameStore((s) => s.initGuestGame);
+  const initSpectatorGame = useGameStore((s) => s.initSpectatorGame);
   const restoreHostGame = useGameStore((s) => s.restoreHostGame);
   const restoreGuestGame = useGameStore((s) => s.restoreGuestGame);
+  const restoreSpectatorGame = useGameStore((s) => s.restoreSpectatorGame);
   const setConnection = useGameStore((s) => s.setConnection);
+  const addSpectatorConnection = useGameStore((s) => s.addSpectatorConnection);
+  const removeSpectatorConnection = useGameStore((s) => s.removeSpectatorConnection);
   const handleNetworkMessage = useGameStore((s) => s.handleNetworkMessage);
   const currentHand = useGameStore((s) => s.currentHand);
   const placeTile = useGameStore((s) => s.placeTile);
   const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const reorderHand = useGameStore((s) => s.reorderHand);
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
+  const spectatorPlayers = useGameStore((s) => s.players);
+  const spectatorConfig = useGameStore((s) => s.config);
   const gameVariant = useGameStore((s) => s.gameVariant);
 
   useWakeLock(phase === 'playing');
-  useKeyboardControls(true);
+  useKeyboardControls(!isSpectator); // Disable keyboard controls for spectators
+
+  // Track spectator sendFn references so disconnect can remove the correct one
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const spectatorSendFnMap = useRef<Map<any, (msg: unknown) => void>>(new Map());
 
   const [initialized, setInitialized] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<'classic' | 'racing'>(
     variant === 'racing' ? 'racing' : 'classic',
   );
+  const [spectatorHandsVisible, setSpectatorHandsVisible] = useState(true);
   const [gameStarted, setGameStarted] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
   const [pendingBlank, setPendingBlank] = useState<{
@@ -277,6 +295,10 @@ function OnlineGame({
       restoreGuestGame(recovery.clientGameState, recovery.roomCode).then(() =>
         setInitialized(true),
       );
+    } else if (role === 'spectator' && recovery.spectatorGameState) {
+      restoreSpectatorGame(recovery.spectatorGameState, recovery.roomCode).then(() =>
+        setInitialized(true),
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -289,15 +311,47 @@ function OnlineGame({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection.setOnMessage, handleNetworkMessage]);
 
+  // Wire spectator connection handlers (host only)
+  useEffect(() => {
+    if (
+      role === 'host' &&
+      connection.setOnSpectatorConnected &&
+      connection.setOnSpectatorDisconnected
+    ) {
+      connection.setOnSpectatorConnected((conn) => {
+        const sendFn = (msg: unknown) => {
+          if (conn.open) {
+            conn.send(msg);
+          }
+        };
+        spectatorSendFnMap.current.set(conn, sendFn);
+        addSpectatorConnection(sendFn);
+      });
+
+      connection.setOnSpectatorDisconnected((conn) => {
+        const sendFn = spectatorSendFnMap.current.get(conn);
+        if (sendFn) {
+          removeSpectatorConnection(sendFn);
+          spectatorSendFnMap.current.delete(conn);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, connection.setOnSpectatorConnected, connection.setOnSpectatorDisconnected]);
+
   // When connected: set send function and init game (or sync after recovery)
   useEffect(() => {
     if (connection.status !== 'connected') return;
 
     // Always update the send function when (re)connected
-    setConnection(connection.send);
+    if (role !== 'spectator') {
+      setConnection(connection.send);
+    }
 
     if (initialized) {
       // Recovery or reconnect: request sync from host
+      // Note: spectators don't need REQUEST_SYNC — they get fresh state
+      // via addSpectatorConnection when host processes their SPECTATE_JOIN
       if (role === 'guest') {
         connection.send({ type: 'REQUEST_SYNC' });
       }
@@ -316,10 +370,15 @@ function OnlineGame({
     if (role === 'host') {
       // Host waits for user to click "Start Game" - don't auto-init
       // (gameStarted state will trigger initialization)
-    } else {
+    } else if (role === 'guest') {
       initGuestGame(roomCode).then(() => {
         setInitialized(true);
         connection.send({ type: 'REQUEST_SYNC' });
+      });
+    } else if (role === 'spectator') {
+      initSpectatorGame(roomCode).then(() => {
+        setInitialized(true);
+        // Spectator will receive GAME_STATE after SPECTATE_JOIN handshake
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -331,14 +390,14 @@ function OnlineGame({
     if (connection.status !== 'waiting') return;
 
     const roomCode = connection.roomCode || '';
-    const config: GameConfig | undefined =
-      selectedVariant === 'racing'
-        ? {
-            ...DEFAULT_GAME_CONFIG,
-            gameVariant: 'racing',
-            racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
-          }
-        : undefined;
+    const config: GameConfig = {
+      ...DEFAULT_GAME_CONFIG,
+      spectatorHandsVisible,
+      ...(selectedVariant === 'racing' && {
+        gameVariant: 'racing' as const,
+        racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
+      }),
+    };
     initHostGame(roomCode, config).then(() => setInitialized(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameStarted, connection.status]);
@@ -354,11 +413,14 @@ function OnlineGame({
     };
   }, []);
 
-  // Show lobby/waiting screen until game is ready
+  // Show lobby/waiting screen until game is ready.
+  // Guests and spectators don't need the dictionary (host validates moves),
+  // so don't block their UI on dictionary loading.
+  const needsDictionary = role === 'host';
   const gameReady =
     (connection.status === 'connected' || connection.status === 'reconnecting') &&
     initialized &&
-    dictionaryLoaded &&
+    (!needsDictionary || dictionaryLoaded) &&
     (phase === 'playing' || phase === 'finished');
 
   const handleDragEnd = useCallback(
@@ -405,6 +467,22 @@ function OnlineGame({
     navigate('/');
   };
 
+  // Special case: Spectator waiting for game to start
+  if (isSpectator && connection.status === 'connected' && phase === 'waiting') {
+    return (
+      <div className="game-loading">
+        <div className="online-lobby">
+          <div className="spectator-waiting">
+            <div className="loading-text">Waiting for game to start...</div>
+            <button className="btn-secondary" onClick={handleAbandon}>
+              Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!gameReady) {
     return (
       <div className="game-loading">
@@ -416,7 +494,10 @@ function OnlineGame({
               <GameModeSelector
                 selectedVariant={selectedVariant}
                 onVariantChange={setSelectedVariant}
+                spectatorHandsVisible={spectatorHandsVisible}
+                onSpectatorHandsChange={setSpectatorHandsVisible}
                 onStartGame={() => setGameStarted(true)}
+                roomCode={connection.roomCode ?? ''}
               />
             ) : (
               <LobbyShare roomCode={connection.roomCode ?? ''} />
@@ -432,7 +513,9 @@ function OnlineGame({
           )}
 
           {connection.status === 'connected' && !gameReady && (
-            <div className="loading-text">Starting game...</div>
+            <div className="loading-text">
+              {isSpectator ? 'Connecting to game...' : 'Starting game...'}
+            </div>
           )}
 
           {connection.status === 'error' && (
@@ -448,7 +531,7 @@ function OnlineGame({
           {connection.status === 'disconnected' && (
             <div className="error-box">
               <div>Connection lost</div>
-              {connection.roomCode && <LobbyShare roomCode={connection.roomCode} />}
+              {connection.roomCode && !isSpectator && <LobbyShare roomCode={connection.roomCode} />}
               <button className="btn-primary" onClick={handleAbandon}>
                 Abandon Game
               </button>
@@ -456,6 +539,58 @@ function OnlineGame({
           )}
         </div>
       </div>
+    );
+  }
+
+  if (isSpectator) {
+    // Check if spectator can see hands
+    const canSeeHands = spectatorConfig.spectatorHandsVisible ?? false;
+
+    // Get hands from players if available (only present if spectatorHandsVisible is true)
+    type PlayerWithOptionalHand = (typeof spectatorPlayers)[0] & { hand?: Tile[] };
+    const player0Hand = (spectatorPlayers[0] as PlayerWithOptionalHand).hand || null;
+    const player1Hand = (spectatorPlayers[1] as PlayerWithOptionalHand).hand || null;
+
+    return (
+      <>
+        <LandscapeWarning />
+        <div className="game-page">
+          <TurnBanner />
+          <GameHeader isSpectator={true} />
+          <GameBoard isDragging={false} />
+
+          {canSeeHands && (player0Hand || player1Hand) && (
+            <div className="spectator-hands">
+              {[player0Hand, player1Hand].map((hand, i) => (
+                <div key={i} className="spectator-hand-row">
+                  <div className="spectator-hand-label">{spectatorPlayers[i].name}</div>
+                  <div className="tile-rack">
+                    {hand?.map((tile) => (
+                      <div key={tile.id} className="rack-tile">
+                        <span className="rack-tile-letter">{tile.isBlank ? '' : tile.letter}</span>
+                        {tile.value > 0 && <span className="rack-tile-value">{tile.value}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {phase === 'finished' && <GameOverModal />}
+
+          {connection.status === 'reconnecting' && (
+            <div className="reconnect-overlay">
+              <div className="reconnect-content">
+                <div className="loading-text">Reconnecting...</div>
+                <button className="btn-secondary" onClick={handleAbandon}>
+                  Back
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </>
     );
   }
 
@@ -473,13 +608,13 @@ function OnlineGame({
       <LandscapeWarning />
       <div className="game-page">
         <TurnBanner />
-        <GameHeader />
+        <GameHeader isSpectator={false} />
         <GameBoard isDragging={activeTileId !== null} />
         <div className="game-bottom">
           <TileRack />
           {gameVariant === 'racing' ? <RacingControls /> : <GameControls />}
         </div>
-        <GameOverModal />
+        {phase === 'finished' && <GameOverModal />}
 
         {connection.status === 'reconnecting' && (
           <div className="reconnect-overlay">
@@ -523,12 +658,29 @@ function OnlineGame({
 function GameModeSelector({
   selectedVariant,
   onVariantChange,
+  spectatorHandsVisible,
+  onSpectatorHandsChange,
   onStartGame,
+  roomCode,
 }: {
   selectedVariant: 'classic' | 'racing';
   onVariantChange: (variant: 'classic' | 'racing') => void;
+  spectatorHandsVisible: boolean;
+  onSpectatorHandsChange: (visible: boolean) => void;
   onStartGame: () => void;
+  roomCode: string;
 }) {
+  const handleDevStart = () => {
+    onStartGame();
+    // Open guest and spectator tabs after a short delay to let the host initialize
+    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const origin = window.location.origin;
+    setTimeout(() => {
+      window.open(`${origin}${base}/game?mode=guest&code=${roomCode}`, '_blank');
+      window.open(`${origin}${base}/game?mode=spectator&code=${roomCode}`, '_blank');
+    }, 300);
+  };
+
   return (
     <>
       <div className="lobby-label">Choose Game Mode</div>
@@ -548,9 +700,28 @@ function GameModeSelector({
           <div className="mode-description">Race to place words first</div>
         </button>
       </div>
+      <div className="spectator-settings">
+        <label className="spectator-toggle">
+          <input
+            type="checkbox"
+            checked={spectatorHandsVisible}
+            onChange={(e) => onSpectatorHandsChange(e.target.checked)}
+          />
+          <span>Allow spectators to see player hands</span>
+        </label>
+      </div>
       <button className="btn-primary btn-start-game" onClick={onStartGame}>
         Start Game
       </button>
+      {__DEV_MODE__ && roomCode && (
+        <button
+          className="btn-secondary btn-start-game"
+          onClick={handleDevStart}
+          style={{ marginTop: 8 }}
+        >
+          Dev: Start + Open Guest & Spectator
+        </button>
+      )}
     </>
   );
 }
@@ -561,9 +732,19 @@ function GameModeSelector({
 
 function LobbyShare({ roomCode }: { roomCode: string }) {
   const [copied, setCopied] = useState(false);
+  const config = useGameStore((s) => s.config);
+  const updateConfig = useGameStore((s) => s.updateConfig);
+  const [spectatorHandsVisible, setSpectatorHandsVisible] = useState(
+    config.spectatorHandsVisible ?? false,
+  );
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   const shareUrl = `${window.location.origin}${base}/game?mode=guest&code=${roomCode}`;
+
+  const handleToggleSpectatorHands = (checked: boolean) => {
+    setSpectatorHandsVisible(checked);
+    updateConfig({ spectatorHandsVisible: checked });
+  };
 
   const handleCopy = async () => {
     try {
@@ -612,6 +793,18 @@ function LobbyShare({ roomCode }: { roomCode: string }) {
         )}
       </div>
       <div className="lobby-hint">Share this link or scan the QR code</div>
+
+      <div className="spectator-settings">
+        <label className="spectator-toggle">
+          <input
+            type="checkbox"
+            checked={spectatorHandsVisible}
+            onChange={(e) => handleToggleSpectatorHands(e.target.checked)}
+          />
+          <span>Allow spectators to see player hands</span>
+        </label>
+      </div>
+
       <div className="loading-text">Waiting for opponent...</div>
     </>
   );
