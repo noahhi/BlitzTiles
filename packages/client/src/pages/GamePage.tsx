@@ -261,6 +261,7 @@ function OnlineGame({
   const [selectedVariant, setSelectedVariant] = useState<'classic' | 'racing'>(
     variant === 'racing' ? 'racing' : 'classic',
   );
+  const [spectatorHandsVisible, setSpectatorHandsVisible] = useState(true);
   const [gameStarted, setGameStarted] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
   const [pendingBlank, setPendingBlank] = useState<{
@@ -389,14 +390,14 @@ function OnlineGame({
     if (connection.status !== 'waiting') return;
 
     const roomCode = connection.roomCode || '';
-    const config: GameConfig | undefined =
-      selectedVariant === 'racing'
-        ? {
-            ...DEFAULT_GAME_CONFIG,
-            gameVariant: 'racing',
-            racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
-          }
-        : undefined;
+    const config: GameConfig = {
+      ...DEFAULT_GAME_CONFIG,
+      spectatorHandsVisible,
+      ...(selectedVariant === 'racing' && {
+        gameVariant: 'racing' as const,
+        racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
+      }),
+    };
     initHostGame(roomCode, config).then(() => setInitialized(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameStarted, connection.status]);
@@ -493,6 +494,8 @@ function OnlineGame({
               <GameModeSelector
                 selectedVariant={selectedVariant}
                 onVariantChange={setSelectedVariant}
+                spectatorHandsVisible={spectatorHandsVisible}
+                onSpectatorHandsChange={setSpectatorHandsVisible}
                 onStartGame={() => setGameStarted(true)}
               />
             ) : (
@@ -673,10 +676,14 @@ function OnlineGame({
 function GameModeSelector({
   selectedVariant,
   onVariantChange,
+  spectatorHandsVisible,
+  onSpectatorHandsChange,
   onStartGame,
 }: {
   selectedVariant: 'classic' | 'racing';
   onVariantChange: (variant: 'classic' | 'racing') => void;
+  spectatorHandsVisible: boolean;
+  onSpectatorHandsChange: (visible: boolean) => void;
   onStartGame: () => void;
 }) {
   return (
@@ -697,6 +704,16 @@ function GameModeSelector({
           <div className="mode-name">Racing</div>
           <div className="mode-description">Race to place words first</div>
         </button>
+      </div>
+      <div className="spectator-settings">
+        <label className="spectator-toggle">
+          <input
+            type="checkbox"
+            checked={spectatorHandsVisible}
+            onChange={(e) => onSpectatorHandsChange(e.target.checked)}
+          />
+          <span>Allow spectators to see player hands</span>
+        </label>
       </div>
       <button className="btn-primary btn-start-game" onClick={onStartGame}>
         Start Game

@@ -160,6 +160,6 @@ export const INITIAL_STATE = {
     timerDurationMs: 0,
     overtimePenaltyPerMinute: 0,
     turnTimeLimitMs: 60000,
-    spectatorHandsVisible: false,
+    spectatorHandsVisible: true,
   } as GameConfig,
 };
