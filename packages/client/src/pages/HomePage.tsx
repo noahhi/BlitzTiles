@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { hasActiveSession, loadSession, clearSession } from '../hooks/sessionPersistence';
+import { getDictionary } from '../hooks/useGameStore';
 import { useTheme } from '../hooks/useTheme';
 import './HomePage.css';
+
+// Eagerly preload dictionary on app start so it's ready when a game begins.
+// The fetch + gzip decompress runs in the background while the user is on the home screen.
+getDictionary().catch(() => {});
 
 export function HomePage() {
   const navigate = useNavigate();

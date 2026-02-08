@@ -133,18 +133,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   initGuestGame: async (roomCode) => {
     clearTurnTimeout();
-    // Reset all state and set mode synchronously so incoming messages are processed immediately
+    // Reset all state and set mode synchronously so incoming messages are processed immediately.
+    // Guest doesn't need dictionary (host validates moves), so mark ready immediately
+    // and load dictionary in background for potential future local use.
     set({
       ...INITIAL_STATE,
       mode: 'guest',
       playerIndex: 1,
+      dictionaryLoaded: true,
       _sendFn: get()._sendFn, // preserve the connection
       _roomCode: roomCode,
     });
-    const dictionary = await getDictionary();
-    set({
-      dictionaryLoaded: true,
-      _dictionary: dictionary,
+    getDictionary().then((dictionary) => {
+      set({ _dictionary: dictionary });
     });
   },
 
@@ -184,17 +185,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   initSpectatorGame: async (roomCode) => {
     clearTurnTimeout();
+    // Spectators don't need dictionary at all — mark ready immediately.
     set({
       ...INITIAL_STATE,
       mode: 'spectator',
       playerIndex: -1,
+      dictionaryLoaded: true,
       _sendFn: get()._sendFn,
       _roomCode: roomCode,
-    });
-    const dictionary = await getDictionary();
-    set({
-      dictionaryLoaded: true,
-      _dictionary: dictionary,
     });
   },
 

@@ -23,7 +23,7 @@ import { TurnBanner } from '../components/game/TurnBanner';
 import { QRCodeSVG } from 'qrcode.react';
 import type { GameConfig } from '@blitztiles/shared';
 import { DEFAULT_GAME_CONFIG, DEFAULT_RACING_ROUND_TIME_LIMIT_MS } from '@blitztiles/shared';
-import { useGameStore, filterStateForPlayer } from '../hooks/useGameStore';
+import { useGameStore, filterStateForPlayer, getDictionary } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { useKeyboardControls } from '../hooks/useKeyboardControls';
@@ -31,6 +31,11 @@ import { loadSession, clearSession } from '../hooks/sessionPersistence';
 import type { PersistedSession } from '../hooks/sessionPersistence';
 import type { Tile } from '@blitztiles/shared';
 import './GamePage.css';
+
+// Eagerly start loading the dictionary as soon as this module is imported.
+// This way the fetch + decompress runs in parallel with PeerJS connection setup,
+// instead of waiting until initGuestGame/initHostGame is called.
+getDictionary().catch(() => {});
 
 /**
  * Resolves tile ID from drag-and-drop events.
@@ -407,11 +412,14 @@ function OnlineGame({
     };
   }, []);
 
-  // Show lobby/waiting screen until game is ready
+  // Show lobby/waiting screen until game is ready.
+  // Guests and spectators don't need the dictionary (host validates moves),
+  // so don't block their UI on dictionary loading.
+  const needsDictionary = role === 'host';
   const gameReady =
     (connection.status === 'connected' || connection.status === 'reconnecting') &&
     initialized &&
-    dictionaryLoaded &&
+    (!needsDictionary || dictionaryLoaded) &&
     (phase === 'playing' || phase === 'finished');
 
   const handleDragEnd = useCallback(
