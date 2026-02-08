@@ -1,10 +1,10 @@
 # BlitzTiles
 
-A Scrabble-like word game with blitz-chess style move clocks. Play fast-paced word battles with time pressure adding a strategic dimension beyond traditional word games.
+A crossword-style word game with blitz-chess style move clocks. Play fast-paced word battles with time pressure adding a strategic dimension beyond traditional word games.
 
 ## Features
 
-- 🎮 **Classic Scrabble Gameplay** — 15×15 board, standard tile distribution and bonus squares
+- 🎮 **Classic Word Gameplay** — 15×15 board, balanced tile distribution and bonus squares
 - ⏱️ **Blitz Mode Timers** — Move clocks add urgency and strategic depth
 - 📱 **Mobile-First Design** — Touch-optimized drag-and-drop interface
 - 🔗 **Instant Multiplayer** — No accounts needed, just share a link
@@ -85,7 +85,7 @@ packages/
 ## Game Rules
 
 - **Board**: 15×15 grid with bonus squares (DL, TL, DW, TW)
-- **Tiles**: 100 tiles total, standard Scrabble distribution
+- **Tiles**: 100 tiles with balanced letter distribution
 - **Hand Size**: 7 tiles
 - **Starting Move**: First word must cover center square (7,7)
 - **Valid Moves**: All placed tiles must form a single contiguous row or column, connected to existing tiles

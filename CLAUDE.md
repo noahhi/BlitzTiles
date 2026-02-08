@@ -2,7 +2,7 @@
 
 ## What is this project?
 
-BlitzTiles is a Scrabble-like word game with blitz-chess style move clocks. It's a mobile-friendly web app where players can jump in without accounts, share a link to invite an opponent, and play with time pressure.
+BlitzTiles is a crossword-style word game with blitz-chess style move clocks. It's a mobile-friendly web app where players can jump in without accounts, share a link to invite an opponent, and play with time pressure.
 
 ## Architecture
 
@@ -88,7 +88,7 @@ Key files:
 
 ## Game rules quick reference
 
-- 15×15 board, standard Scrabble bonus layout (symmetric)
+- 15×15 board, BlitzTiles bonus layout (symmetric)
 - 100 tiles (standard distribution), 2 blanks (0 pts, wild)
 - Hand size: 7
 - First move must cover center square (7,7)
