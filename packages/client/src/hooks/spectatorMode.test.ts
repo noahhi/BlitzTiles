@@ -227,6 +227,8 @@ describe('Spectator Mode - Game Flow Integration', () => {
         overtimePenaltyPerMinute: 0,
         turnTimeLimitMs: 60000,
         spectatorHandsVisible: true,
+        gameVariant: 'classic',
+        racingRoundTimeLimitMs: 30000,
       },
       TEST_SEED,
     );
@@ -428,6 +430,8 @@ describe('Spectator Mode - Turn Timer', () => {
         overtimePenaltyPerMinute: 0,
         turnTimeLimitMs: 60000,
         spectatorHandsVisible: false,
+        gameVariant: 'classic',
+        racingRoundTimeLimitMs: 30000,
       },
       TEST_SEED,
     );

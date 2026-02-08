@@ -9,6 +9,8 @@ export function TurnBanner() {
   const players = useGameStore((s) => s.players);
   const phase = useGameStore((s) => s.phase);
   const moveHistory = useGameStore((s) => s.moveHistory);
+  const gameVariant = useGameStore((s) => s.gameVariant);
+  const racingRound = useGameStore((s) => s.racingRound);
 
   // Track which banner has been dismissed via onAnimationEnd
   const [dismissedAt, setDismissedAt] = useState(0);
@@ -17,13 +19,16 @@ export function TurnBanner() {
 
   const text = useMemo(() => {
     if (players.length < 2) return '';
+    if (gameVariant === 'racing') {
+      return `Round ${racingRound ?? 1} — Go!`;
+    }
     const isOnline = mode === 'host' || mode === 'guest';
     const isMyTurn = isOnline ? currentPlayerIndex === playerIndex : true;
     if (isOnline) {
       return isMyTurn ? 'Your Turn!' : "Opponent's Turn";
     }
     return `${players[currentPlayerIndex].name}'s Turn`;
-  }, [currentPlayerIndex, mode, playerIndex, players]);
+  }, [currentPlayerIndex, mode, playerIndex, players, gameVariant, racingRound]);
 
   // Derive visibility from moveHistory — no effect needed
   const showBanner =

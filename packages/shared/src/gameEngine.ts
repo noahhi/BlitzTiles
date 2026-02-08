@@ -115,6 +115,10 @@ export function createGame(
     moveHistory: [],
     stateVersion: 1,
     lastMoveTiles: [],
+    sharedRack: null,
+    racingRound: null,
+    consecutiveSkippedRounds: 0,
+    roundStartTimestamp: null,
   };
 }
 

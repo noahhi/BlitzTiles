@@ -32,23 +32,31 @@ export function useTimer(): TimerState {
   const turnStartTimestamp = useGameStore((s) => s.turnStartTimestamp);
   const turnTimeLimitMs = useGameStore((s) => s.turnTimeLimitMs);
   const phase = useGameStore((s) => s.phase);
+  const gameVariant = useGameStore((s) => s.gameVariant);
+  const roundStartTimestamp = useGameStore((s) => s.roundStartTimestamp);
+  const racingRoundTimeLimitMs = useGameStore((s) => s.racingRoundTimeLimitMs);
 
-  const isRunning = phase === 'playing' && turnTimeLimitMs > 0 && turnStartTimestamp !== '';
+  // In racing mode, use round timestamps/limits instead of turn ones
+  const isRacing = gameVariant === 'racing';
+  const startTs = isRacing ? (roundStartTimestamp ?? '') : turnStartTimestamp;
+  const limitMs = isRacing ? racingRoundTimeLimitMs : turnTimeLimitMs;
 
-  const [remainingMs, setRemainingMs] = useState(turnTimeLimitMs);
+  const isRunning = phase === 'playing' && limitMs > 0 && startTs !== '';
+
+  const [remainingMs, setRemainingMs] = useState(limitMs);
   const rafRef = useRef<number>(0);
   const vibratedRef = useRef(false);
 
   useEffect(() => {
     if (!isRunning) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setRemainingMs(turnTimeLimitMs);
+      setRemainingMs(limitMs);
       return;
     }
 
     function tick() {
-      const elapsed = Date.now() - Date.parse(turnStartTimestamp);
-      const remaining = Math.max(0, turnTimeLimitMs - elapsed);
+      const elapsed = Date.now() - Date.parse(startTs);
+      const remaining = Math.max(0, limitMs - elapsed);
       setRemainingMs(remaining);
 
       // Vibrate once when entering critical zone
@@ -70,14 +78,14 @@ export function useTimer(): TimerState {
     return () => {
       cancelAnimationFrame(rafRef.current);
     };
-  }, [isRunning, turnStartTimestamp, turnTimeLimitMs]);
+  }, [isRunning, startTs, limitMs]);
 
-  // Reset vibrated flag when turn changes
+  // Reset vibrated flag when turn/round changes
   useEffect(() => {
     vibratedRef.current = false;
-  }, [turnStartTimestamp]);
+  }, [startTs]);
 
-  const progress = turnTimeLimitMs > 0 ? Math.min(1, 1 - remainingMs / turnTimeLimitMs) : 0;
+  const progress = limitMs > 0 ? Math.min(1, 1 - remainingMs / limitMs) : 0;
 
   return {
     remainingMs,

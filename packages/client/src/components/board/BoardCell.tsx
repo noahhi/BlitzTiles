@@ -12,6 +12,7 @@ interface EdgeFlags {
 interface BoardCellProps {
   cell: BoardCellType;
   pendingTile?: PlacedTile;
+  ghostTile?: PlacedTile;
   isSelected: boolean;
   isLastMove: boolean;
   isCursor?: boolean;
@@ -31,6 +32,7 @@ const BONUS_LABELS: Record<NonNullable<BonusType>, string> = {
 export function BoardCell({
   cell,
   pendingTile,
+  ghostTile,
   isSelected,
   isLastMove,
   isCursor = false,
@@ -42,6 +44,7 @@ export function BoardCell({
   const tile = pendingTile || cell.tile;
   const isCenter = cell.row === 7 && cell.col === 7;
   const isPending = !!pendingTile;
+  const hasConflict = !!pendingTile && !!ghostTile; // both players placed here
 
   const droppableId = `cell-${cell.row}-${cell.col}`;
   const { setNodeRef, isOver } = useDroppable({
@@ -69,6 +72,7 @@ export function BoardCell({
     isPending ? 'pending' : '',
     isOver ? 'drag-over' : '',
     isLastMove ? 'last-move' : '',
+    hasConflict ? 'conflict' : '',
     isCursor ? 'cursor' : '',
   ]
     .filter(Boolean)
@@ -114,6 +118,11 @@ export function BoardCell({
         >
           <span className="tile-letter">{tile.designatedLetter || tile.letter}</span>
           {tile.value > 0 && <span className="tile-value">{tile.value}</span>}
+        </div>
+      ) : ghostTile ? (
+        <div className="cell-tile ghost-tile">
+          <span className="tile-letter">{ghostTile.designatedLetter || ghostTile.letter}</span>
+          {ghostTile.value > 0 && <span className="tile-value">{ghostTile.value}</span>}
         </div>
       ) : (
         <>

@@ -152,6 +152,7 @@ export const BONUS_MAP: readonly (readonly BonusType[])[] = buildBonusMap();
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_TURN_TIME_LIMIT_MS = 60_000; // 60 seconds per turn
+export const DEFAULT_RACING_ROUND_TIME_LIMIT_MS = 30_000; // 30 seconds per racing round
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
   timerMode: 'per_turn',
@@ -159,4 +160,6 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   overtimePenaltyPerMinute: 10,
   turnTimeLimitMs: DEFAULT_TURN_TIME_LIMIT_MS,
   spectatorHandsVisible: false,
+  gameVariant: 'classic',
+  racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
 };

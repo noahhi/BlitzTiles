@@ -18,6 +18,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
   const setBlankLetter = useGameStore((s) => s.setBlankLetter);
   const phase = useGameStore((s) => s.phase);
   const lastMoveTiles = useGameStore((s) => s.lastMoveTiles);
+  const ghostTiles = useGameStore((s) => s.ghostTiles);
   const cursorPosition = useGameStore((s) => s.cursorPosition);
   const autoZoomEnabled = useSettingsStore((s) => s.autoZoom);
   const scorePreviewEnabled = useSettingsStore((s) => s.scorePreview);
@@ -142,6 +143,14 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
     [pendingTileMap],
   );
 
+  const ghostTileMap = useMemo(() => {
+    const map = new Map<string, PlacedTile>();
+    for (const tile of ghostTiles) {
+      map.set(`${tile.row},${tile.col}`, tile);
+    }
+    return map;
+  }, [ghostTiles]);
+
   // Score badge goes on the last cell of the word
   const scoreBadgeCell =
     preview.score !== null && placedTiles.length > 0
@@ -202,6 +211,7 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
                 key={`${rowIdx}-${colIdx}`}
                 cell={cell}
                 pendingTile={getPendingTile(rowIdx, colIdx)}
+                ghostTile={ghostTileMap.get(`${rowIdx},${colIdx}`)}
                 isSelected={false}
                 isLastMove={isLastMove}
                 isCursor={isCursor}

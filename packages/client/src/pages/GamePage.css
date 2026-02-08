@@ -52,6 +52,52 @@
   letter-spacing: 0.1em;
 }
 
+/* Mode selector */
+.mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.mode-option {
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mode-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-option.selected {
+  border-color: var(--accent);
+  background: rgba(233, 69, 96, 0.15);
+}
+
+.mode-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.mode-description {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.btn-start-game {
+  width: 100%;
+  padding: 12px;
+  font-size: 1.1rem;
+}
+
 .room-code {
   font-size: 3rem;
   font-family: monospace;

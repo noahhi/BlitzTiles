@@ -15,11 +15,14 @@ import { GameBoard } from '../components/board/GameBoard';
 import { TileRack } from '../components/tiles/TileRack';
 import { GameHeader } from '../components/game/GameHeader';
 import { GameControls } from '../components/game/GameControls';
+import { RacingControls } from '../components/game/RacingControls';
 import { GameOverModal } from '../components/game/GameOverModal';
 import { BlankTilePicker } from '../components/tiles/BlankTilePicker';
 import { LandscapeWarning } from '../components/game/LandscapeWarning';
 import { TurnBanner } from '../components/game/TurnBanner';
 import { QRCodeSVG } from 'qrcode.react';
+import type { GameConfig } from '@blitztiles/shared';
+import { DEFAULT_GAME_CONFIG, DEFAULT_RACING_ROUND_TIME_LIMIT_MS } from '@blitztiles/shared';
 import { useGameStore, filterStateForPlayer } from '../hooks/useGameStore';
 import { useGameConnection } from '../hooks/useGameConnection';
 import { useWakeLock } from '../hooks/useWakeLock';
@@ -42,9 +45,10 @@ export function GamePage() {
   const [searchParams] = useSearchParams();
   const gameMode = searchParams.get('mode') as 'host' | 'guest' | 'spectator' | null;
   const joinCode = searchParams.get('code') || '';
+  const variant = searchParams.get('variant') as 'racing' | null;
 
   if (gameMode === 'host' || gameMode === 'guest' || gameMode === 'spectator') {
-    return <OnlineGame role={gameMode} joinCode={joinCode} />;
+    return <OnlineGame role={gameMode} joinCode={joinCode} variant={variant} />;
   }
 
   return <LocalGame />;
@@ -196,9 +200,11 @@ function LocalGame() {
 function OnlineGame({
   role,
   joinCode,
+  variant,
 }: {
   role: 'host' | 'guest' | 'spectator';
   joinCode: string;
+  variant: 'racing' | null;
 }) {
   const navigate = useNavigate();
   const isSpectator = role === 'spectator';
@@ -237,6 +243,7 @@ function OnlineGame({
   const removePlacedTile = useGameStore((s) => s.removePlacedTile);
   const spectatorPlayers = useGameStore((s) => s.players);
   const spectatorConfig = useGameStore((s) => s.config);
+  const gameVariant = useGameStore((s) => s.gameVariant);
 
   useWakeLock(phase === 'playing');
   useKeyboardControls(!isSpectator); // Disable keyboard controls for spectators
@@ -246,6 +253,10 @@ function OnlineGame({
   const spectatorSendFnMap = useRef<Map<any, (msg: unknown) => void>>(new Map());
 
   const [initialized, setInitialized] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<'classic' | 'racing'>(
+    variant === 'racing' ? 'racing' : 'classic',
+  );
+  const [gameStarted, setGameStarted] = useState(false);
   const [activeTileId, setActiveTileId] = useState<string | null>(null);
   const [pendingBlank, setPendingBlank] = useState<{
     tileId: string;
@@ -351,7 +362,8 @@ function OnlineGame({
     // Fresh game init (no recovery)
     const roomCode = connection.roomCode || '';
     if (role === 'host') {
-      initHostGame(roomCode).then(() => setInitialized(true));
+      // Host waits for user to click "Start Game" - don't auto-init
+      // (gameStarted state will trigger initialization)
     } else if (role === 'guest') {
       initGuestGame(roomCode).then(() => {
         setInitialized(true);
@@ -365,6 +377,24 @@ function OnlineGame({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connection.status]);
+
+  // Host: initialize game when "Start Game" is clicked
+  useEffect(() => {
+    if (role !== 'host' || !gameStarted || initialized) return;
+    if (connection.status !== 'waiting') return;
+
+    const roomCode = connection.roomCode || '';
+    const config: GameConfig | undefined =
+      selectedVariant === 'racing'
+        ? {
+            ...DEFAULT_GAME_CONFIG,
+            gameVariant: 'racing',
+            racingRoundTimeLimitMs: DEFAULT_RACING_ROUND_TIME_LIMIT_MS,
+          }
+        : undefined;
+    initHostGame(roomCode, config).then(() => setInitialized(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameStarted, connection.status]);
 
   // Clear session on unmount (navigating away)
   useEffect(() => {
@@ -450,7 +480,16 @@ function OnlineGame({
         <div className="online-lobby">
           {connection.status === 'connecting' && <div className="loading-text">Connecting...</div>}
 
-          {connection.status === 'waiting' && <LobbyShare roomCode={connection.roomCode ?? ''} />}
+          {connection.status === 'waiting' &&
+            (role === 'host' && !gameStarted ? (
+              <GameModeSelector
+                selectedVariant={selectedVariant}
+                onVariantChange={setSelectedVariant}
+                onStartGame={() => setGameStarted(true)}
+              />
+            ) : (
+              <LobbyShare roomCode={connection.roomCode ?? ''} />
+            ))}
 
           {connection.status === 'reconnecting' && (
             <div className="reconnect-box">
@@ -580,7 +619,7 @@ function OnlineGame({
         <GameBoard isDragging={activeTileId !== null} />
         <div className="game-bottom">
           <TileRack />
-          <GameControls />
+          {gameVariant === 'racing' ? <RacingControls /> : <GameControls />}
         </div>
         {phase === 'finished' && <GameOverModal />}
 
@@ -616,6 +655,45 @@ function OnlineGame({
         />
       )}
     </DndContext>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Game mode selector (host lobby)
+// ---------------------------------------------------------------------------
+
+function GameModeSelector({
+  selectedVariant,
+  onVariantChange,
+  onStartGame,
+}: {
+  selectedVariant: 'classic' | 'racing';
+  onVariantChange: (variant: 'classic' | 'racing') => void;
+  onStartGame: () => void;
+}) {
+  return (
+    <>
+      <div className="lobby-label">Choose Game Mode</div>
+      <div className="mode-selector">
+        <button
+          className={`mode-option ${selectedVariant === 'classic' ? 'selected' : ''}`}
+          onClick={() => onVariantChange('classic')}
+        >
+          <div className="mode-name">Classic</div>
+          <div className="mode-description">Turn-based word placement</div>
+        </button>
+        <button
+          className={`mode-option ${selectedVariant === 'racing' ? 'selected' : ''}`}
+          onClick={() => onVariantChange('racing')}
+        >
+          <div className="mode-name">Racing</div>
+          <div className="mode-description">Race to place words first</div>
+        </button>
+      </div>
+      <button className="btn-primary btn-start-game" onClick={onStartGame}>
+        Start Game
+      </button>
+    </>
   );
 }
 
