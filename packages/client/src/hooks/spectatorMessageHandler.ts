@@ -4,7 +4,7 @@
  * Receives read-only state updates from host.
  */
 
-import type { SpectatorGameState } from '@blitztiles/shared';
+import type { SpectatorGameState, PlacedTile } from '@blitztiles/shared';
 import type { GameStore } from './storeTypes';
 import { syncFromSpectatorGameState } from './stateSync';
 import { saveSession, clearSession } from './sessionPersistence';
@@ -15,6 +15,12 @@ export function handleSpectatorMessage(
   set: (partial: Partial<GameStore>) => void,
 ) {
   switch (msg.type) {
+    case 'GHOST_TILES': {
+      if (Array.isArray(msg.tiles)) {
+        set({ ghostTiles: msg.tiles as PlacedTile[] });
+      }
+      break;
+    }
     case 'GAME_STATE': {
       if (typeof msg.state !== 'object' || msg.state === null) {
         console.warn('[BlitzTiles] Invalid GAME_STATE message: missing state', msg);
@@ -26,6 +32,7 @@ export function handleSpectatorMessage(
         placedTiles: [],
         selectedTileId: null,
         lastMoveError: null,
+        ghostTiles: [], // Clear placement preview on state update
       });
 
       // Persist for session recovery

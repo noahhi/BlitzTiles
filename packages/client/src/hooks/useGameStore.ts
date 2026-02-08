@@ -37,7 +37,11 @@ import {
   syncFromSpectatorGameState,
 } from './stateSync';
 import { filterStateForPlayer, filterStateForSpectator } from './stateSync';
-import { broadcastToSpectators, persistGameSession } from './broadcast';
+import {
+  broadcastToSpectators,
+  broadcastGhostTilesToSpectators,
+  persistGameSession,
+} from './broadcast';
 import { clearTurnTimeout, scheduleTurnTimeout, scheduleRacingRoundTimeout } from './turnTimeout';
 import { handleHostMessage } from './hostMessageHandler';
 import { handleGuestMessage } from './guestMessageHandler';
@@ -303,9 +307,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       selectedTileId: null,
     });
 
-    // Racing + online: send placement update for ghost tiles
-    if (gameVariant === 'racing' && mode !== 'local' && _sendFn) {
-      _sendFn({ type: mode === 'host' ? 'GHOST_TILES' : 'PLACEMENT_UPDATE', tiles: newPlaced });
+    // Online: send placement update for ghost tiles (spectators + opponent in racing)
+    if (mode !== 'local' && _sendFn) {
+      if (mode === 'host') {
+        // Host sends ghost tiles to guest (racing) and all spectators
+        if (gameVariant === 'racing') {
+          _sendFn({ type: 'GHOST_TILES', tiles: newPlaced });
+        }
+        broadcastGhostTilesToSpectators(get, newPlaced);
+      } else if (mode === 'guest') {
+        _sendFn({ type: 'PLACEMENT_UPDATE', tiles: newPlaced });
+      }
     }
   },
 
@@ -322,9 +334,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const newPlaced = placedTiles.filter((t) => t.id !== tileId);
     set({ placedTiles: newPlaced });
 
-    // Racing + online: send placement update for ghost tiles
-    if (gameVariant === 'racing' && mode !== 'local' && _sendFn) {
-      _sendFn({ type: mode === 'host' ? 'GHOST_TILES' : 'PLACEMENT_UPDATE', tiles: newPlaced });
+    // Online: send placement update for ghost tiles (spectators + opponent in racing)
+    if (mode !== 'local' && _sendFn) {
+      if (mode === 'host') {
+        if (gameVariant === 'racing') {
+          _sendFn({ type: 'GHOST_TILES', tiles: newPlaced });
+        }
+        broadcastGhostTilesToSpectators(get, newPlaced);
+      } else if (mode === 'guest') {
+        _sendFn({ type: 'PLACEMENT_UPDATE', tiles: newPlaced });
+      }
     }
   },
 

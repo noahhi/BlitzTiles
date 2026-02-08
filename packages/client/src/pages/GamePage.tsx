@@ -497,6 +497,7 @@ function OnlineGame({
                 spectatorHandsVisible={spectatorHandsVisible}
                 onSpectatorHandsChange={setSpectatorHandsVisible}
                 onStartGame={() => setGameStarted(true)}
+                roomCode={connection.roomCode ?? ''}
               />
             ) : (
               <LobbyShare roomCode={connection.roomCode ?? ''} />
@@ -660,13 +661,26 @@ function GameModeSelector({
   spectatorHandsVisible,
   onSpectatorHandsChange,
   onStartGame,
+  roomCode,
 }: {
   selectedVariant: 'classic' | 'racing';
   onVariantChange: (variant: 'classic' | 'racing') => void;
   spectatorHandsVisible: boolean;
   onSpectatorHandsChange: (visible: boolean) => void;
   onStartGame: () => void;
+  roomCode: string;
 }) {
+  const handleDevStart = () => {
+    onStartGame();
+    // Open guest and spectator tabs after a short delay to let the host initialize
+    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const origin = window.location.origin;
+    setTimeout(() => {
+      window.open(`${origin}${base}/game?mode=guest&code=${roomCode}`, '_blank');
+      window.open(`${origin}${base}/game?mode=spectator&code=${roomCode}`, '_blank');
+    }, 300);
+  };
+
   return (
     <>
       <div className="lobby-label">Choose Game Mode</div>
@@ -699,6 +713,15 @@ function GameModeSelector({
       <button className="btn-primary btn-start-game" onClick={onStartGame}>
         Start Game
       </button>
+      {__DEV_MODE__ && roomCode && (
+        <button
+          className="btn-secondary btn-start-game"
+          onClick={handleDevStart}
+          style={{ marginTop: 8 }}
+        >
+          Dev: Start + Open Guest & Spectator
+        </button>
+      )}
     </>
   );
 }

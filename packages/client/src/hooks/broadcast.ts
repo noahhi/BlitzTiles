@@ -2,7 +2,7 @@
  * Helpers for broadcasting game state to spectators and persisting sessions.
  */
 
-import type { GameState } from '@blitztiles/shared';
+import type { GameState, PlacedTile } from '@blitztiles/shared';
 import type { GameStore } from './storeTypes';
 import { filterStateForSpectator } from './stateSync';
 import { saveSession, clearSession } from './sessionPersistence';
@@ -14,6 +14,16 @@ export function broadcastToSpectators(get: () => GameStore, state: GameState) {
     const spectatorState = filterStateForSpectator(state, config);
     _spectatorSendFns.forEach((fn) => {
       fn({ type: 'GAME_STATE', state: spectatorState });
+    });
+  }
+}
+
+/** Broadcast ghost tiles (live placement preview) to all connected spectators. */
+export function broadcastGhostTilesToSpectators(get: () => GameStore, tiles: PlacedTile[]) {
+  const { _spectatorSendFns } = get();
+  if (_spectatorSendFns.length > 0) {
+    _spectatorSendFns.forEach((fn) => {
+      fn({ type: 'GHOST_TILES', tiles });
     });
   }
 }

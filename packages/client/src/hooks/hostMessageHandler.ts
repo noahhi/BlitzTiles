@@ -15,7 +15,12 @@ import {
 } from '@blitztiles/shared';
 import type { GameStore } from './storeTypes';
 import { syncFromGameState, filterStateForPlayer } from './stateSync';
-import { broadcastToSpectators, persistGameSession, clearSession } from './broadcast';
+import {
+  broadcastToSpectators,
+  broadcastGhostTilesToSpectators,
+  persistGameSession,
+  clearSession,
+} from './broadcast';
 import { scheduleTurnTimeout, scheduleRacingRoundTimeout } from './turnTimeout';
 
 export function handleHostMessage(
@@ -101,9 +106,13 @@ export function handleHostMessage(
       break;
     }
     case 'PLACEMENT_UPDATE': {
-      // Racing: relay ghost tiles to host's display
-      if (isRacing && Array.isArray(msg.tiles)) {
-        set({ ghostTiles: msg.tiles as PlacedTile[] });
+      if (Array.isArray(msg.tiles)) {
+        // Racing: show ghost tiles on host's board (both players see each other's placements)
+        if (isRacing) {
+          set({ ghostTiles: msg.tiles as PlacedTile[] });
+        }
+        // Always relay to spectators so they see live placement previews
+        broadcastGhostTilesToSpectators(get, msg.tiles as PlacedTile[]);
       }
       break;
     }
