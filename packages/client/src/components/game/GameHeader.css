@@ -4,7 +4,7 @@
   justify-content: space-between;
   padding: 8px 36px 8px 36px;
   background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border);
   position: relative;
 }
 
@@ -37,7 +37,7 @@
 }
 
 .player-info.active {
-  background: rgba(233, 69, 96, 0.2);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
   box-shadow: 0 0 0 1px var(--accent);
 }
 
@@ -121,7 +121,7 @@
 
 .timer-ring-bg {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: var(--border);
   stroke-width: 3;
 }
 
@@ -212,7 +212,7 @@
   0%,
   100% {
     border-color: var(--danger);
-    box-shadow: inset 0 0 20px rgba(207, 102, 121, 0.15);
+    box-shadow: inset 0 0 20px color-mix(in srgb, var(--danger) 15%, transparent);
   }
   50% {
     border-color: transparent;
@@ -250,13 +250,13 @@
 
 .settings-btn:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border);
 }
 
 .settings-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay);
   backdrop-filter: blur(4px);
   z-index: 100;
   display: flex;
@@ -273,7 +273,7 @@
   max-width: 400px;
   max-height: 80vh;
   overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
 }
 
 .settings-modal-header {
@@ -301,7 +301,7 @@
 
 .settings-modal-close:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border);
 }
 
 /* In-game spectator settings */

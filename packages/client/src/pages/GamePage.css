@@ -79,18 +79,18 @@
 }
 
 .mode-option:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--hover);
 }
 
 .mode-option.selected {
   border-color: var(--accent);
-  background: rgba(233, 69, 96, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .mode-name {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text);
   margin-bottom: 4px;
 }
 
@@ -110,7 +110,7 @@
   font-family: monospace;
   font-weight: 700;
   letter-spacing: 0.3em;
-  color: #fff;
+  color: var(--text);
   background: var(--bg-secondary);
   padding: 16px 24px;
   border-radius: 12px;
@@ -173,7 +173,7 @@
 .reconnect-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,7 +201,7 @@
 .spectator-settings {
   margin: 16px 0;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--hover);
   border-radius: 8px;
 }
 
