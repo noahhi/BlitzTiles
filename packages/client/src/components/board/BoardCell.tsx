@@ -93,10 +93,10 @@ export function BoardCell({
   const lastMoveStyle: React.CSSProperties | undefined = lastMoveEdges
     ? {
         ['--lm-shadow' as string]: [
-          lastMoveEdges.top && 'inset 0 2px 0 0 rgba(255, 171, 0, 0.45)',
-          lastMoveEdges.bottom && 'inset 0 -2px 0 0 rgba(255, 171, 0, 0.45)',
-          lastMoveEdges.left && 'inset 2px 0 0 0 rgba(255, 171, 0, 0.45)',
-          lastMoveEdges.right && 'inset -2px 0 0 0 rgba(255, 171, 0, 0.45)',
+          lastMoveEdges.top && 'inset 0 2px 0 0 var(--last-move)',
+          lastMoveEdges.bottom && 'inset 0 -2px 0 0 var(--last-move)',
+          lastMoveEdges.left && 'inset 2px 0 0 0 var(--last-move)',
+          lastMoveEdges.right && 'inset -2px 0 0 0 var(--last-move)',
         ]
           .filter(Boolean)
           .join(', '),

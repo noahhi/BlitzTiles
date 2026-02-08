@@ -1,7 +1,7 @@
 .blank-picker-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,13 +11,14 @@
 
 .blank-picker-modal {
   background: var(--bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--border-strong);
   border-radius: 12px;
   padding: 24px;
   text-align: center;
   max-width: 320px;
   width: 90%;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 16px 48px var(--shadow);
+  animation: modal-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .blank-picker-title {
@@ -55,7 +56,7 @@
 
 .blank-picker-letter:hover {
   transform: scale(1.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px var(--shadow);
 }
 
 .blank-picker-letter:active {
@@ -67,11 +68,11 @@
   font-size: 0.9rem;
   background: transparent;
   color: var(--text-muted);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   cursor: pointer;
 }
 
 .blank-picker-cancel:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--hover);
 }

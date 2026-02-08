@@ -19,7 +19,7 @@
 
 .tile-rack.rack-drag-over {
   box-shadow: 0 0 0 2px var(--accent);
-  background: rgba(187, 134, 252, 0.1);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .rack-tile {
@@ -36,14 +36,22 @@
   position: relative;
   user-select: none;
   -webkit-user-select: none;
-  transition: box-shadow 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
   font-weight: 700;
   touch-action: none;
   will-change: transform;
 }
 
-.rack-tile:active {
+.rack-tile:hover:not(.placed):not(.dragging) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--shadow);
+}
+
+.rack-tile:active:not(.placed):not(.dragging) {
   cursor: grabbing;
+  transform: scale(0.95);
 }
 
 .rack-tile.dragging {
@@ -96,7 +104,7 @@
   border-radius: 4px;
   position: relative;
   font-weight: 700;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 24px var(--shadow);
   transform: scale(1.2);
   pointer-events: none;
   will-change: transform;

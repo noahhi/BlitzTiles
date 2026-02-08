@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
   gap: 16px;
 }
@@ -41,7 +41,7 @@
   width: 44px;
   height: 26px;
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--border-strong);
   position: relative;
   transition: background 0.2s ease;
 }
@@ -75,7 +75,7 @@
 .theme-option {
   padding: 0.4rem 0.8rem;
   font-size: 0.85rem;
-  border: 1px solid rgba(128, 128, 128, 0.2);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
   color: var(--text-muted);
@@ -91,6 +91,6 @@
 }
 
 .theme-option:hover:not(.active) {
-  background: rgba(128, 128, 128, 0.1);
-  border-color: rgba(128, 128, 128, 0.3);
+  background: var(--hover);
+  border-color: var(--border-strong);
 }

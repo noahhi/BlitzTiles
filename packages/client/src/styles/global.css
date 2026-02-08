@@ -26,6 +26,18 @@
   --tw: #6a3a3a; /* Muted Red */
   --center: #4a4a4a;
 
+  /* Player colors */
+  --player0: #4fc3f7; /* Light blue */
+  --player1: #ff8a65; /* Warm orange */
+
+  /* Semantic borders & surfaces */
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --hover: rgba(255, 255, 255, 0.05);
+  --overlay: rgba(0, 0, 0, 0.7);
+  --shadow: rgba(0, 0, 0, 0.5);
+  --last-move: rgba(255, 171, 0, 0.45);
+
   --success: #03dac6;
   --warning: #ffab00;
   --danger: #cf6679;
@@ -106,11 +118,11 @@ button:disabled {
 .btn-secondary {
   background: var(--bg-card);
   color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border);
 }
 
 /* Back button - consistent across all screens */
@@ -135,11 +147,11 @@ button:disabled {
 
 .back-btn:hover:not(:disabled) {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border);
 }
 
 .back-btn:active:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--border-strong);
   transform: scale(0.95);
 }
 
@@ -158,7 +170,7 @@ button:disabled {
   --accent: #9966cc;
   --accent-hover: #7744aa;
 
-  /* Tiles (dark on light - classic Scrabble) */
+  /* Tiles (dark on light) */
   --tile-bg: #2c2c2c;
   --tile-text: #f5f5f5;
   --tile-border: #1a1a1a;
@@ -177,8 +189,32 @@ button:disabled {
   --tw: #dc143c; /* Crimson red */
   --center: #ffa500; /* Orange */
 
+  /* Player colors */
+  --player0: #2196f3; /* Blue */
+  --player1: #e65100; /* Orange */
+
+  /* Semantic borders & surfaces */
+  --border: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.15);
+  --hover: rgba(0, 0, 0, 0.04);
+  --overlay: rgba(0, 0, 0, 0.5);
+  --shadow: rgba(0, 0, 0, 0.25);
+  --last-move: rgba(255, 140, 0, 0.4);
+
   /* Status colors (darker for contrast) */
   --success: #00a86b;
   --warning: #ff8c00;
   --danger: #c41e3a;
+}
+
+/* Shared keyframes */
+@keyframes modal-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
