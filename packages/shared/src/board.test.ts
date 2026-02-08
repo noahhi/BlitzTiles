@@ -62,12 +62,12 @@ describe('createEmptyBoard', () => {
     expect(board[7][7].bonus).toBe('DW');
   });
 
-  it('corner squares have TW bonus', () => {
+  it('TW squares are at edge positions', () => {
     const board = createEmptyBoard();
-    expect(board[0][0].bonus).toBe('TW');
-    expect(board[0][14].bonus).toBe('TW');
-    expect(board[14][0].bonus).toBe('TW');
-    expect(board[14][14].bonus).toBe('TW');
+    expect(board[0][4].bonus).toBe('TW');
+    expect(board[0][10].bonus).toBe('TW');
+    expect(board[14][4].bonus).toBe('TW');
+    expect(board[14][10].bonus).toBe('TW');
   });
 });
 

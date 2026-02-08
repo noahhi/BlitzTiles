@@ -1,14 +1,14 @@
 /**
  * Game constants: tile distribution, bonus square map, and defaults.
  *
- * Tile distribution and bonus layout follow standard Scrabble rules.
+ * Tile distribution and bonus layout are original to BlitzTiles.
  * Board coordinates: row 0–14, col 0–14. Center is (7,7).
  */
 
 import type { BonusType, GameConfig } from './types.js';
 
 // ---------------------------------------------------------------------------
-// Tile distribution — 100 tiles total (standard Scrabble)
+// Tile distribution — 100 tiles total
 // ---------------------------------------------------------------------------
 
 /** [letter, count, pointValue]. Empty string = blank tile. */
@@ -49,7 +49,7 @@ export const CENTER = 7; // (7,7) is center square
 export const BINGO_BONUS = 50; // bonus for using all 7 tiles
 
 // ---------------------------------------------------------------------------
-// Bonus square map — standard 15×15 Scrabble layout
+// Bonus square map — BlitzTiles 15×15 layout
 // ---------------------------------------------------------------------------
 
 /**
@@ -59,81 +59,81 @@ export const BINGO_BONUS = 50; // bonus for using all 7 tiles
 function buildBonusMap(): BonusType[][] {
   const b: BonusType[][] = Array.from({ length: 15 }, () => Array(15).fill(null) as BonusType[]);
 
-  // Triple Word squares
+  // Triple Word squares (8)
   const tw: [number, number][] = [
-    [0, 0],
-    [0, 7],
-    [0, 14],
-    [7, 0],
-    [7, 14],
-    [14, 0],
-    [14, 7],
-    [14, 14],
+    [0, 4],
+    [0, 10],
+    [4, 0],
+    [4, 14],
+    [10, 0],
+    [10, 14],
+    [14, 4],
+    [14, 10],
   ];
 
-  // Double Word squares (including center)
+  // Double Word squares (17, including center)
   const dw: [number, number][] = [
-    [1, 1],
-    [2, 2],
-    [3, 3],
-    [4, 4],
-    [1, 13],
-    [2, 12],
-    [3, 11],
-    [4, 10],
-    [10, 4],
-    [11, 3],
-    [12, 2],
-    [13, 1],
-    [10, 10],
-    [11, 11],
-    [12, 12],
-    [13, 13],
     [7, 7], // center
-  ];
-
-  // Triple Letter squares
-  const tl: [number, number][] = [
-    [1, 5],
-    [1, 9],
-    [5, 1],
+    [1, 7],
+    [7, 13],
+    [13, 7],
+    [7, 1], // outer cross
+    [4, 7],
+    [7, 10],
+    [10, 7],
+    [7, 4], // inner cross
+    [3, 3],
+    [3, 11],
+    [11, 11],
+    [11, 3], // middle diamond
     [5, 5],
     [5, 9],
-    [5, 13],
-    [9, 1],
-    [9, 5],
     [9, 9],
-    [9, 13],
-    [13, 5],
-    [13, 9],
+    [9, 5], // inner diamond
   ];
 
-  // Double Letter squares
+  // Triple Letter squares (12)
+  const tl: [number, number][] = [
+    [0, 7],
+    [7, 14],
+    [14, 7],
+    [7, 0], // edge midpoints
+    [3, 5],
+    [5, 11],
+    [11, 9],
+    [9, 3], // mid-board ring A
+    [3, 9],
+    [9, 11],
+    [11, 5],
+    [5, 3], // mid-board ring B
+  ];
+
+  // Double Letter squares (24)
   const dl: [number, number][] = [
-    [0, 3],
-    [0, 11],
-    [2, 6],
-    [2, 8],
-    [3, 0],
-    [3, 7],
-    [3, 14],
-    [6, 2],
-    [6, 6],
-    [6, 8],
-    [6, 12],
-    [7, 3],
-    [7, 11],
-    [8, 2],
-    [8, 6],
-    [8, 8],
-    [8, 12],
-    [11, 0],
-    [11, 7],
-    [11, 14],
-    [12, 6],
-    [12, 8],
-    [14, 3],
-    [14, 11],
+    [1, 3],
+    [3, 13],
+    [13, 11],
+    [11, 1], // orbit 1
+    [1, 6],
+    [6, 13],
+    [13, 8],
+    [8, 1], // orbit 2
+    [2, 4],
+    [4, 12],
+    [12, 10],
+    [10, 2], // orbit 3
+    [4, 6],
+    [6, 10],
+    [10, 8],
+    [8, 4], // orbit 4
+    [6, 4],
+    [4, 8],
+    [8, 10],
+    [10, 6], // orbit 5
+    [5, 7],
+    [7, 9],
+    [9, 7],
+    [7, 5], // orbit 6
   ];
 
   for (const [r, c] of tw) b[r][c] = 'TW';

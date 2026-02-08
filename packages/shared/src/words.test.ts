@@ -157,7 +157,7 @@ describe('loadCompressedDictionary', () => {
     const trie = await loadCompressedDictionary(new Uint8Array(gzipped));
     expect(trie.has('HELLO')).toBe(true);
     expect(trie.has('WORLD')).toBe(true);
-    expect(trie.has('SCRABBLE')).toBe(true);
+    expect(trie.has('PUZZLE')).toBe(true);
     expect(trie.has('ZYZZYVA')).toBe(true);
   });
 

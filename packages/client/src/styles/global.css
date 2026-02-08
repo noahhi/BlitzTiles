@@ -128,7 +128,7 @@ button:disabled {
   --accent: #9966cc;
   --accent-hover: #7744aa;
 
-  /* Tiles (dark on light - classic Scrabble) */
+  /* Tiles (dark on light - classic word game) */
   --tile-bg: #2c2c2c;
   --tile-text: #f5f5f5;
   --tile-border: #1a1a1a;
