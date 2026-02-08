@@ -64,6 +64,7 @@ export function GamePage() {
 // ---------------------------------------------------------------------------
 
 function LocalGame() {
+  const navigate = useNavigate();
   const phase = useGameStore((s) => s.phase);
   const initLocalGame = useGameStore((s) => s.initLocalGame);
   const dictionaryLoaded = useGameStore((s) => s.dictionaryLoaded);
@@ -147,6 +148,9 @@ function LocalGame() {
   if (!dictionaryLoaded || phase === 'waiting') {
     return (
       <div className="game-loading">
+        <button className="back-btn loading-back-btn" onClick={() => navigate('/')}>
+          &#x2190;
+        </button>
         <div className="loading-text">Loading game...</div>
       </div>
     );
@@ -486,6 +490,9 @@ function OnlineGame({
   if (!gameReady) {
     return (
       <div className="game-loading">
+        <button className="back-btn loading-back-btn" onClick={handleAbandon}>
+          &#x2190;
+        </button>
         <div className="online-lobby">
           {connection.status === 'connecting' && <div className="loading-text">Connecting...</div>}
 

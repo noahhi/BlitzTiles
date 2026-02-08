@@ -113,6 +113,36 @@ button:disabled {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Back button - consistent across all screens */
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  /* Mobile-friendly touch target: minimum 44x44px */
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.back-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.back-btn:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(0.95);
+}
+
 /* Light theme palette */
 [data-theme='light'] {
   /* Backgrounds */

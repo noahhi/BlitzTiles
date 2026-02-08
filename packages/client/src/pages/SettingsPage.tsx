@@ -8,7 +8,7 @@ export function SettingsPage() {
   return (
     <div className="settings-page">
       <div className="settings-header">
-        <button className="settings-back-btn" onClick={() => navigate('/')}>
+        <button className="back-btn" onClick={() => navigate('/')}>
           &#x2190;
         </button>
         <h2 className="settings-title">Settings</h2>
