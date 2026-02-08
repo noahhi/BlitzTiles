@@ -301,3 +301,21 @@
   font-size: 1rem;
   color: var(--text);
 }
+
+.btn-copy-spectate {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.btn-copy-spectate:hover {
+  background: var(--bg-secondary);
+}

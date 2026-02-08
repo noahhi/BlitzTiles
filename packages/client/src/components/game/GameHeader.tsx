@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../hooks/useGameStore';
 import { useTimer } from '../../hooks/useTimer';
@@ -50,8 +50,33 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
   const updateConfig = useGameStore((s) => s.updateConfig);
   const gameVariant = useGameStore((s) => s.gameVariant);
   const racingRound = useGameStore((s) => s.racingRound);
+  const roomCode = useGameStore((s) => s._roomCode);
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const spectateUrl = roomCode
+    ? `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}/game?mode=spectator&code=${roomCode}`
+    : null;
+
+  const handleCopySpectateLink = useCallback(async () => {
+    if (!spectateUrl) return;
+    try {
+      await navigator.clipboard.writeText(spectateUrl);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = spectateUrl;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [spectateUrl]);
 
   const toggleSpectatorHands = () => {
     updateConfig({ spectatorHandsVisible: !config.spectatorHandsVisible });
@@ -141,17 +166,22 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
               </button>
             </div>
             <SettingsPanel />
-            {mode === 'host' && (
+            {isOnline && spectateUrl && (
               <div className="spectator-settings-ingame">
                 <h4>Spectators</h4>
-                <label className="spectator-toggle">
-                  <input
-                    type="checkbox"
-                    checked={config.spectatorHandsVisible ?? false}
-                    onChange={() => toggleSpectatorHands()}
-                  />
-                  <span>Show player hands to spectators</span>
-                </label>
+                <button className="btn-copy-spectate" onClick={handleCopySpectateLink}>
+                  {copied ? 'Copied!' : 'Copy Spectate Link'}
+                </button>
+                {mode === 'host' && (
+                  <label className="spectator-toggle">
+                    <input
+                      type="checkbox"
+                      checked={config.spectatorHandsVisible ?? false}
+                      onChange={() => toggleSpectatorHands()}
+                    />
+                    <span>Show player hands to spectators</span>
+                  </label>
+                )}
               </div>
             )}
           </div>

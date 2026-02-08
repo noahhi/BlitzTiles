@@ -560,38 +560,19 @@ function OnlineGame({
 
           {canSeeHands && (player0Hand || player1Hand) && (
             <div className="spectator-hands">
-              <div className="spectator-hand-row">
-                <div className="spectator-hand-label">{spectatorPlayers[0].name}'s tiles:</div>
-                <div className="spectator-hand-tiles">
-                  {player0Hand &&
-                    player0Hand.map((tile) => (
-                      <div key={tile.id} className="spectator-tile">
-                        <span className="spectator-tile-letter">
-                          {tile.isBlank ? '?' : tile.letter}
-                        </span>
-                        {tile.value > 0 && (
-                          <span className="spectator-tile-value">{tile.value}</span>
-                        )}
+              {[player0Hand, player1Hand].map((hand, i) => (
+                <div key={i} className="spectator-hand-row">
+                  <div className="spectator-hand-label">{spectatorPlayers[i].name}</div>
+                  <div className="tile-rack">
+                    {hand?.map((tile) => (
+                      <div key={tile.id} className="rack-tile">
+                        <span className="rack-tile-letter">{tile.isBlank ? '' : tile.letter}</span>
+                        {tile.value > 0 && <span className="rack-tile-value">{tile.value}</span>}
                       </div>
                     ))}
+                  </div>
                 </div>
-              </div>
-              <div className="spectator-hand-row">
-                <div className="spectator-hand-label">{spectatorPlayers[1].name}'s tiles:</div>
-                <div className="spectator-hand-tiles">
-                  {player1Hand &&
-                    player1Hand.map((tile) => (
-                      <div key={tile.id} className="spectator-tile">
-                        <span className="spectator-tile-letter">
-                          {tile.isBlank ? '?' : tile.letter}
-                        </span>
-                        {tile.value > 0 && (
-                          <span className="spectator-tile-value">{tile.value}</span>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              </div>
+              ))}
             </div>
           )}
 
