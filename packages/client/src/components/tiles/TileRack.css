@@ -23,8 +23,8 @@
 }
 
 .rack-tile {
-  width: 42px;
-  height: 42px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,23 +70,23 @@
 }
 
 .rack-tile-letter {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 700;
   line-height: 1;
 }
 
 .rack-tile-value {
   position: absolute;
-  bottom: 2px;
-  right: 3px;
-  font-size: 0.55rem;
+  bottom: 3px;
+  right: 4px;
+  font-size: 0.65rem;
   font-weight: 600;
   line-height: 1;
 }
 
 .drag-overlay-tile {
-  width: 42px;
-  height: 42px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;

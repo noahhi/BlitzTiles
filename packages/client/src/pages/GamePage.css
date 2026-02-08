@@ -20,6 +20,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.loading-back-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
 }
 
 .loading-text {
