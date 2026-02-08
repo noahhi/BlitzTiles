@@ -138,6 +138,35 @@ export function usePinchZoom(minScale = 1, maxScale = 2.5, enabled = true) {
     });
   }, []);
 
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (!enabledRef.current) return;
+      e.preventDefault();
+
+      setState((prev) => {
+        const zoomFactor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        const newScale = Math.min(maxScale, Math.max(minScale, prev.scale * zoomFactor));
+
+        // Zoom toward cursor position relative to the container
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const cursorX = e.clientX - rect.left - rect.width / 2;
+        const cursorY = e.clientY - rect.top - rect.height / 2;
+
+        const scaleDiff = newScale / prev.scale;
+        const tx = cursorX - scaleDiff * (cursorX - prev.translateX);
+        const ty = cursorY - scaleDiff * (cursorY - prev.translateY);
+
+        // Snap back to 1x if close
+        if (newScale < 1.1) {
+          return { scale: 1, translateX: 0, translateY: 0 };
+        }
+
+        return { scale: newScale, translateX: tx, translateY: ty };
+      });
+    },
+    [minScale, maxScale],
+  );
+
   const resetZoom = useCallback(() => {
     setState({ scale: 1, translateX: 0, translateY: 0 });
   }, []);
@@ -169,6 +198,7 @@ export function usePinchZoom(minScale = 1, maxScale = 2.5, enabled = true) {
       onTouchStart: handleTouchStart,
       onTouchMove: handleTouchMove,
       onTouchEnd: handleTouchEnd,
+      onWheel: handleWheel,
     },
     resetZoom,
     zoomToCell,

@@ -50,8 +50,10 @@ export function GameBoard({ isDragging = false }: { isDragging?: boolean }) {
     const wasEmpty = prevPlacedCount.current === 0;
     prevPlacedCount.current = placedTiles.length;
 
+    const isTouchDevice = 'ontouchstart' in window;
     if (
       autoZoomEnabled &&
+      isTouchDevice &&
       wasEmpty &&
       placedTiles.length === 1 &&
       scaleRef.current <= 1.05 &&

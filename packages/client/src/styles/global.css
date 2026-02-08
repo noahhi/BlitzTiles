@@ -26,6 +26,10 @@
   --tw: #6a3a3a; /* Muted Red */
   --center: #4a4a4a;
 
+  /* Player colors */
+  --player0: #4fc3f7; /* Light blue */
+  --player1: #ff8a65; /* Warm orange */
+
   --success: #03dac6;
   --warning: #ffab00;
   --danger: #cf6679;
@@ -176,6 +180,10 @@ button:disabled {
   --dw: #f0e68c; /* Khaki yellow */
   --tw: #dc143c; /* Crimson red */
   --center: #ffa500; /* Orange */
+
+  /* Player colors */
+  --player0: #2196f3; /* Blue */
+  --player1: #e65100; /* Orange */
 
   /* Status colors (darker for contrast) */
   --success: #00a86b;

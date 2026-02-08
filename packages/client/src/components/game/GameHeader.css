@@ -26,6 +26,16 @@
   transition: all 0.2s ease;
 }
 
+.player-info.active.player-0 {
+  background: color-mix(in srgb, var(--player0) 15%, transparent);
+  box-shadow: 0 0 0 1px var(--player0);
+}
+
+.player-info.active.player-1 {
+  background: color-mix(in srgb, var(--player1) 15%, transparent);
+  box-shadow: 0 0 0 1px var(--player1);
+}
+
 .player-info.active {
   background: rgba(233, 69, 96, 0.2);
   box-shadow: 0 0 0 1px var(--accent);
@@ -123,6 +133,15 @@
   transition: stroke 0.3s ease;
 }
 
+/* Player-colored timer ring (normal urgency) */
+.turn-timer.normal.player-0 .timer-ring-progress {
+  stroke: var(--player0);
+}
+
+.turn-timer.normal.player-1 .timer-ring-progress {
+  stroke: var(--player1);
+}
+
 .turn-timer.warning .timer-ring-progress {
   stroke: var(--warning);
 }
@@ -137,6 +156,15 @@
   font-variant-numeric: tabular-nums;
   color: var(--text);
   min-width: 3ch;
+}
+
+/* Player-colored timer digits (normal urgency) */
+.turn-timer.normal.player-0 .timer-digits {
+  color: var(--player0);
+}
+
+.turn-timer.normal.player-1 .timer-digits {
+  color: var(--player1);
 }
 
 .turn-timer.warning .timer-digits {

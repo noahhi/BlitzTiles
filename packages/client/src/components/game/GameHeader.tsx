@@ -8,8 +8,10 @@ import './GameHeader.css';
 
 const TimerDisplay = React.memo(function TimerDisplay({
   isSpectator = false,
+  currentPlayerIndex = 0,
 }: {
   isSpectator?: boolean;
+  currentPlayerIndex?: number;
 }) {
   const timerUrgency = useSettingsStore((s) => s.timerUrgency);
   const { display, urgency, progress, isRunning } = useTimer();
@@ -18,11 +20,12 @@ const TimerDisplay = React.memo(function TimerDisplay({
 
   // Spectators see the timer but without urgency effects
   const showUrgency = timerUrgency && !isSpectator;
+  const playerClass = `player-${currentPlayerIndex}`;
 
   return (
     <>
       {showUrgency && urgency === 'critical' && <div className="critical-screen-flash" />}
-      <div className={`turn-timer ${showUrgency ? urgency : 'normal'}`}>
+      <div className={`turn-timer ${showUrgency ? urgency : 'normal'} ${playerClass}`}>
         <svg className="timer-ring" viewBox="0 0 40 40">
           <circle className="timer-ring-bg" cx="20" cy="20" r="17" />
           <circle
@@ -111,7 +114,7 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
         &#x2190;
       </button>
       <div
-        className={`player-info ${isRacing || currentPlayerIndex === 0 ? 'active' : ''} ${!isSpectator && isOnline && playerIndex === 0 ? 'you' : ''}`}
+        className={`player-info player-0 ${isRacing || currentPlayerIndex === 0 ? 'active' : ''} ${!isSpectator && isOnline && playerIndex === 0 ? 'you' : ''}`}
       >
         <div className="player-name">
           {getLabel(0)}
@@ -124,7 +127,7 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
       </div>
 
       <div className="game-info-center">
-        <TimerDisplay isSpectator={isSpectator} />
+        <TimerDisplay isSpectator={isSpectator} currentPlayerIndex={currentPlayerIndex} />
         <div className="bag-count">{tileBagCount} tiles left</div>
         {phase === 'playing' && (
           <div className={`turn-indicator ${!isSpectator && isMyTurn ? 'your-turn' : ''}`}>
@@ -142,7 +145,7 @@ export function GameHeader({ isSpectator = false }: { isSpectator?: boolean }) {
       </div>
 
       <div
-        className={`player-info ${isRacing || currentPlayerIndex === 1 ? 'active' : ''} ${!isSpectator && isOnline && playerIndex === 1 ? 'you' : ''}`}
+        className={`player-info player-1 ${isRacing || currentPlayerIndex === 1 ? 'active' : ''} ${!isSpectator && isOnline && playerIndex === 1 ? 'you' : ''}`}
       >
         <div className="player-name">
           {getLabel(1)}
